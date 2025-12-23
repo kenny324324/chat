@@ -127,16 +127,18 @@ class ProfileScreen extends StatelessWidget {
     AppAnimations.showBouncingModal(
       context: context,
       builder: (context) => Container(
-        margin: const EdgeInsets.all(8),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(40),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 20,
-              offset: const Offset(0, 10),
+              offset: const Offset(0, -5),
             ),
           ],
         ),
@@ -155,7 +157,8 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
             _buildFontOption(context, "系統預設", null),
             _buildFontOption(context, "宇文天穹體", "AppFont"),
-            _buildFontOption(context, "粉圓體", "OpenHuninn", isLast: true),
+            _buildFontOption(context, "粉圓體", "OpenHuninn"),
+            _buildFontOption(context, "文青手寫體", "Handwriting", isLast: true),
           ],
         ),
       ),

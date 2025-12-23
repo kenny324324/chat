@@ -45,11 +45,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         child: Container(
           height: 72,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.85),
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
-                color: AppColors.shadowPink.withOpacity(0.4),
+                color: AppColors.shadowPink.withOpacity(0.3),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
                 spreadRadius: 2,
@@ -59,45 +58,60 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(40),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth;
-                  const double padding = 12.0;
-                  final double tabWidth = (totalWidth - (padding * 2)) / 3;
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.65), // 更通透的玻璃感
+                  borderRadius: BorderRadius.circular(40),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.8), // 邊緣高光
+                    width: 1.5,
+                  ),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final totalWidth = constraints.maxWidth;
+                    const double padding = 12.0;
+                    // 扣除邊框寬度，雖然只有 1.5 但精確一點好，不過 LayoutBuilder 給的是 constraints
+                    // border 繪製在內部嗎？Container border 是畫在 padding 外圍。
+                    // 為了避免內容偏移，LayoutBuilder 拿到的 constraints 已經是扣除 border 後的空間了嗎？
+                    // 不，Container 的 child 會被 border 包住。
+                    
+                    final double tabWidth = (totalWidth - (padding * 2)) / 3;
 
-                  return Stack(
-                    children: [
-                      // 背景滑塊動畫
-                      AnimatedPositioned(
-                        duration: const Duration(milliseconds: 650), // 與 Modal 保持一致
-                        curve: const ElasticOutCurve(1.5), // 與 Modal 保持一致的微彈感
-                        left: padding + (_currentIndex * tabWidth),
-                        top: padding,
-                        bottom: padding,
-                        width: tabWidth,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.darkGrey,
-                            borderRadius: BorderRadius.circular(32),
+                    return Stack(
+                      children: [
+                        // 背景滑塊動畫
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 650),
+                          curve: const ElasticOutCurve(1.5),
+                          left: padding + (_currentIndex * tabWidth),
+                          top: padding,
+                          bottom: padding,
+                          width: tabWidth,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.darkGrey,
+                              borderRadius: BorderRadius.circular(32),
+                            ),
                           ),
                         ),
-                      ),
-                      
-                      // Icons Row
-                      Padding(
-                        padding: const EdgeInsets.all(padding),
-                        child: Row(
-                          children: [
-                            _buildTabItem(0, Icons.history_rounded),
-                            _buildTabItem(1, Icons.gavel_rounded),
-                            _buildTabItem(2, Icons.person_outline_rounded),
-                          ],
+                        
+                        // Icons Row
+                        Padding(
+                          padding: const EdgeInsets.all(padding),
+                          child: Row(
+                            children: [
+                              _buildTabItem(0, Icons.history_rounded),
+                              _buildTabItem(1, Icons.gavel_rounded),
+                              _buildTabItem(2, Icons.person_outline_rounded),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 
 class CharacterCard extends StatelessWidget {
-  final String emoji;
+  final String imagePath; // 改為圖片路徑
   final String name;
   final String comment;
   final int score;
   final Color themeColor;
-  final bool isLoading; // 新增狀態
+  final bool isLoading;
 
   const CharacterCard({
     super.key,
-    required this.emoji,
+    required this.imagePath, // 
     required this.name,
     required this.comment,
     required this.score,
@@ -22,116 +22,111 @@ class CharacterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 0), // 移除底部 margin，改成列表的 padding 或分隔線
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8), // 調整內距，像一般留言列表
       decoration: BoxDecoration(
-        color: themeColor.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: themeColor.withOpacity(0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+        // 移除背景色和邊框，或是只保留底部分隔線
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey.withOpacity(0.1),
+            width: 1,
           ),
-        ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start, // 頂部對齊
         children: [
-          Row(
-            children: [
-              // 頭像
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: themeColor.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    emoji,
-                    style: const TextStyle(fontSize: 28),
-                  ),
-                ),
+          // 左側頭像
+          Container(
+            width: 42, 
+            height: 42,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: themeColor.withOpacity(0.5), width: 1.5),
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                imagePath,
+                fit: BoxFit.contain,
               ),
-              const SizedBox(width: 16),
-              // 名字
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          const SizedBox(width: 12),
+          
+          // 右側內容區
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 頂部資訊列 (名字 + 分數)
+                Row(
                   children: [
                     Text(
                       name,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                         color: AppColors.darkGrey,
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    // 分數小標籤
+                    if (!isLoading)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.darkGrey, // 改成深色背景，確保對比度
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "$score",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: themeColor, // 字體使用角色顏色，在深色背景上會很清楚
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-              ),
-              // 分數顯示 (載入中顯示 ...)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: themeColor.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                
+                const SizedBox(height: 4),
+                
+                // 留言內容或打字動畫
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: isLoading
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: _TypingIndicator(color: AppColors.darkGrey.withOpacity(0.4)),
+                        )
+                      : Text(
+                          comment,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.4,
+                            color: AppColors.darkGrey,
+                          ),
+                        ),
                 ),
-                child: isLoading 
-                  ? SizedBox(
-                      width: 24, 
-                      height: 24, 
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2, 
-                        color: themeColor,
-                      )
-                    )
-                  : Text(
-                      "$score",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        color: AppColors.darkGrey,
-                      ),
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // 留言內容或打字動畫
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: isLoading
-                ? _TypingIndicator(color: AppColors.darkGrey.withOpacity(0.4))
-                : Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      comment,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        height: 1.6,
-                        color: AppColors.darkGrey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                
+                const SizedBox(height: 8),
+                
+                // 底部互動按鈕 (裝飾用，增加社群感)
+                if (!isLoading)
+                  Row(
+                    children: [
+                      Icon(Icons.favorite_border_rounded, size: 16, color: Colors.grey[400]),
+                      const SizedBox(width: 16),
+                      Icon(Icons.chat_bubble_outline_rounded, size: 16, color: Colors.grey[400]),
+                      const SizedBox(width: 16),
+                      Icon(Icons.share_outlined, size: 16, color: Colors.grey[400]),
+                    ],
                   ),
+              ],
+            ),
           ),
         ],
       ),

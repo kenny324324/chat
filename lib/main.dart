@@ -6,11 +6,16 @@ import 'screens/main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 載入環境變數
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     print("Warning: .env file error: $e");
   }
+  
+  // 初始化主題管理器,載入儲存的字體設定
+  await ThemeManager().initialize();
   
   runApp(const MyApp());
 }

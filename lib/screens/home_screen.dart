@@ -1,9 +1,39 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'dart:ui'; // For ImageFilter
 import '../core/app_theme.dart';
-import '../core/app_animations.dart';
-import 'character_card.dart';
-import '../services/gemini_service.dart';
+import 'result_screen.dart';
+
+// 自定義 Hero 矩形補間，讓高度變化更平滑
+class SmoothRectTween extends RectTween {
+  SmoothRectTween({super.begin, super.end});
+
+  @override
+  Rect? lerp(double t) {
+    if (begin == null || end == null) {
+      return super.lerp(t);
+    }
+
+    // 位移使用彈性回彈曲線，有輕微的超出和回彈效果
+    final positionT = Curves.easeOutBack.transform(t);
+
+    // 高度變化使用更柔和的曲線，讓高度更從容地展開/收縮
+    final heightT = Curves.easeInOutSine.transform(t);
+
+    // 分別插值 X/Y 位置、寬度和高度
+    final left = begin!.left + (end!.left - begin!.left) * positionT;
+    final top = begin!.top + (end!.top - begin!.top) * positionT;
+    final width = begin!.width + (end!.width - begin!.width) * positionT;
+    final height =
+        begin!.height + (end!.height - begin!.height) * heightT; // 高度用更柔和的曲線
+
+    return Rect.fromLTWH(left, top, width, height);
+  }
+}
+
+// Hero 矩形補間構建器
+RectTween createSmoothRectTween(Rect? begin, Rect? end) {
+  return SmoothRectTween(begin: begin, end: end);
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,550 +44,434 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  final GeminiService _geminiService = GeminiService();
-  
-  // 狀態
-  bool _showResult = false;
-  bool _isAnalyzing = false;
-  
-  // 資料
-  int _averageScore = 0;
-  List<Map<String, dynamic>> _characters = [];
 
-  // 動畫控制器
-  late AnimationController _resultAnimController;
-  
+  // 狀態 (已將分析狀態移至 ResultScreen)
+  // bool _showResult = false; // 已移除
+
   @override
   void initState() {
     super.initState();
-    _resultAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _resultAnimController.dispose();
     super.dispose();
   }
 
-  // 開啟輸入 Modal (整合彈跳動畫)
-  void _showInputModal() {
-    AppAnimations.showBouncingModal(
-      context: context,
-      builder: (context) => _InputModal(
-        controller: _controller,
-        onSubmit: () {
-          Navigator.pop(context);
-          _startAnalysis();
+  void _startAnalysis() async {
+    if (_controller.text.trim().isEmpty) return;
+
+    // 1. 先收起鍵盤
+    FocusScope.of(context).unfocus();
+
+    // 2. 關鍵優化：稍微等待鍵盤動畫開始，避免與頁面轉場搶資源導致卡頓
+    // 通常鍵盤動畫約 250ms，這裡等待 100ms 讓 UI 執行緒喘口氣
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (!mounted) return;
+
+    // 跳轉到結果頁面 (使用自訂轉場或標準轉場，這裡使用標準轉場配合 Hero)
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 600), // 加快到 600ms
+        reverseTransitionDuration: const Duration(milliseconds: 450), // 返回也加快
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            ResultScreen(userText: _controller.text),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // 進入時：快速淡入
+          var fadeIn = CurvedAnimation(
+            parent: animation,
+            curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
+          );
+
+          // 返回時：快速淡入（secondaryAnimation 需要反轉）
+          // 當上層頁面關閉時，secondaryAnimation 從 1 -> 0
+          // 我們希望 HomeScreen 從 0 -> 1，所以用 reverse
+          var fadeInOnReturn = Tween<double>(begin: 0.0, end: 1.0).animate(
+            CurvedAnimation(
+              parent: ReverseAnimation(secondaryAnimation),
+              curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
+            ),
+          );
+
+          return FadeTransition(
+            opacity: fadeIn,
+            child: FadeTransition(opacity: fadeInOnReturn, child: child),
+          );
         },
       ),
     );
-  }
-
-  void _startAnalysis() async {
-    if (_controller.text.isEmpty) return;
-    
-    // 1. 切換狀態
-    setState(() {
-      _showResult = true;
-      _isAnalyzing = true;
-      _averageScore = 0;
-      
-      // 佔位資料
-      _characters = [
-        {'name': 'Softie', 'emoji': '🐣', 'color': AppColors.creamYellow, 'score': 0, 'comment': ''},
-        {'name': 'Nerdy', 'emoji': '🐰', 'color': AppColors.powderBlue, 'score': 0, 'comment': ''},
-        {'name': 'Blunt', 'emoji': '🐻', 'color': AppColors.palePurple, 'score': 0, 'comment': ''},
-        {'name': 'Chaotic', 'emoji': '🐱', 'color': Colors.white, 'score': 0, 'comment': ''},
-      ];
-    });
-
-    _resultAnimController.forward(from: 0);
-
-    // 2. 呼叫 API
-    final result = await _geminiService.analyzeAction(_controller.text);
-
-    if (mounted) {
-      final rawChars = List<Map<String, dynamic>>.from(result['characters']);
-      
-      // 補上顏色
-      for (var char in rawChars) {
-        switch (char['name']) {
-          case 'Softie': char['color'] = AppColors.creamYellow; break;
-          case 'Nerdy': char['color'] = AppColors.powderBlue; break;
-          case 'Blunt': char['color'] = AppColors.palePurple; break;
-          case 'Chaotic': char['color'] = Colors.white; break;
-          default: char['color'] = Colors.white;
-        }
-      }
-
-      setState(() {
-        _isAnalyzing = false;
-        _averageScore = result['totalScore'] as int;
-        _characters = rawChars;
-      });
-    }
-  }
-
-  void _reset() {
-    setState(() {
-      _showResult = false;
-      _controller.clear();
-      _characters = [];
-      _averageScore = 0;
-      _isAnalyzing = false;
-    });
-    _resultAnimController.reset();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.skinPink,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 800),
-        switchInCurve: Curves.easeInOutCubic,
-        switchOutCurve: Curves.easeInOutCubic,
-        child: _showResult ? _buildResultView() : _buildHomeView(),
-      ),
+      resizeToAvoidBottomInset: true,
+      body: _buildHomeView(),
     );
   }
 
-  // === 新版首頁：沉浸式舞台 ===
+  // === 新版首頁：社群風格 ===
   Widget _buildHomeView() {
-    return Stack(
-      key: const ValueKey('HomeView'),
-      children: [
-        // 1. 角落偷看的角色 (Peeking Characters)
-        Positioned(
-          top: -30,
-          left: 20,
-          child: _PeekingCharacter(
-            emoji: "🐣", 
-            angle: 0.2, 
-            delay: 0,
-            color: AppColors.creamYellow,
-          ),
-        ),
-        Positioned(
-          top: 100,
-          right: -40,
-          child: _PeekingCharacter(
-            emoji: "🐰", 
-            angle: -0.3, 
-            delay: 1000,
-            color: AppColors.powderBlue,
-          ),
-        ),
-        Positioned(
-          bottom: 150,
-          left: -40,
-          child: _PeekingCharacter(
-            emoji: "🐻", 
-            angle: 0.3, 
-            delay: 500,
-            color: AppColors.palePurple,
-          ),
-        ),
-        Positioned(
-          bottom: -30,
-          right: 40,
-          child: _PeekingCharacter(
-            emoji: "🐱", 
-            angle: -0.1, 
-            delay: 1500,
-            color: Colors.white,
-          ),
-        ),
-
-        // 2. 中央互動區
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Today's Story",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.darkGrey.withOpacity(0.3),
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 40),
-              
-              // 呼吸的按鈕
-              GestureDetector(
-                onTap: _showInputModal,
-                child: _PulsingButton(),
-              ),
-              
-              const SizedBox(height: 32),
-              Text(
-                "點擊告解",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.darkGrey.withOpacity(0.5),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // === 結果視圖 ===
-  Widget _buildResultView() {
-    return Stack(
-      key: const ValueKey('ResultView'),
-      children: [
-        // 背景按鈕
-        if (!_isAnalyzing)
-          Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ScaleTransition(
-                scale: CurvedAnimation(
-                  parent: _resultAnimController,
-                  curve: const Interval(0.8, 1.0, curve: Curves.elasticOut),
-                ),
-                child: TextButton.icon(
-                  onPressed: _reset,
-                  icon: const Icon(Icons.refresh, color: AppColors.darkGrey),
-                  label: const Text(
-                    "再來一次",
-                    style: TextStyle(color: AppColors.darkGrey, fontWeight: FontWeight.bold),
+    return Scaffold(
+      backgroundColor: AppColors.skinPink, // 保持背景色，但在上面疊加層次
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. 頂部導航欄 (Custom App Bar)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "今日動態", // 修改標題
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.darkGrey,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    backgroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-        // 主要內容
-        SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(24, 60, 24, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 總分 (大標題)
-              Center(
-                child: ScaleTransition(
-                  scale: CurvedAnimation(
-                    parent: _resultAnimController,
-                    curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
-                  ),
-                  child: Column(
+                  Row(
                     children: [
-                      Text(
-                        _isAnalyzing ? "?" : _averageScore.toString(),
-                        style: const TextStyle(
-                          fontSize: 100,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.darkGrey,
-                          height: 1,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.darkGrey,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _isAnalyzing ? "評判中..." : "今日得分",
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
+                      // 愛心圖示 (純裝飾，不可點擊)
+                      const Icon(
+                        Icons.favorite_border_rounded,
+                        color: AppColors.darkGrey,
+                        size: 28,
                       ),
                     ],
                   ),
-                ),
-              ),
-              
-              const SizedBox(height: 40),
-
-              // 角色卡片列表
-              ...List.generate(_characters.length, (index) {
-                final char = _characters[index];
-                final double start = 0.3 + (index * 0.15); 
-                
-                return _StaggeredItem(
-                  controller: _resultAnimController,
-                  interval: Interval(start, 1.0, curve: Curves.easeOutBack),
-                  child: CharacterCard(
-                    emoji: char['emoji'] as String,
-                    name: char['name'] as String,
-                    comment: char['comment'] as String,
-                    score: char['score'] as int,
-                    themeColor: char['color'] as Color,
-                    isLoading: _isAnalyzing, 
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// === 新增元件：偷看的角色 ===
-class _PeekingCharacter extends StatefulWidget {
-  final String emoji;
-  final double angle;
-  final int delay;
-  final Color color;
-
-  const _PeekingCharacter({
-    required this.emoji,
-    required this.angle,
-    required this.delay,
-    required this.color,
-  });
-
-  @override
-  State<_PeekingCharacter> createState() => _PeekingCharacterState();
-}
-
-class _PeekingCharacterState extends State<_PeekingCharacter> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-    
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _controller.repeat(reverse: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        // 輕微的探頭動作
-        final move = math.sin(_controller.value * math.pi) * 10;
-        return Transform.translate(
-          offset: Offset(move * (widget.angle > 0 ? 1 : -1), move),
-          child: Transform.rotate(
-            angle: widget.angle,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: widget.color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.color.withOpacity(0.4),
-                    blurRadius: 20,
-                  ),
                 ],
               ),
-              child: Center(
-                child: Text(
-                  widget.emoji,
-                  style: const TextStyle(fontSize: 50),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10),
+
+                    // 2. 角色動態列 (Stories Rail)
+                    SizedBox(
+                      height: 115,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          _buildStoryAvatar(
+                            "Softie",
+                            "assets/images/characters/chic.png",
+                            [const Color(0xFFFFD54F), const Color(0xFFFFECB3)],
+                          ),
+                          _buildStoryAvatar(
+                            "Nerdy",
+                            "assets/images/characters/bunny.png",
+                            [const Color(0xFF64B5F6), const Color(0xFFBBDEFB)],
+                          ),
+                          _buildStoryAvatar(
+                            "Loyal",
+                            "assets/images/characters/shiba.png",
+                            [const Color(0xFFFFB74D), const Color(0xFFFFE0B2)],
+                          ),
+                          _buildStoryAvatar(
+                            "Blunt",
+                            "assets/images/characters/bear.png",
+                            [const Color(0xFF9575CD), const Color(0xFFD1C4E9)],
+                          ),
+                          _buildStoryAvatar(
+                            "Chaotic",
+                            "assets/images/characters/cat.png",
+                            [const Color(0xFFE0E0E0), const Color(0xFFF5F5F5)],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // 3. 發文卡片區 (Create Post Card - Hero Source)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Hero(
+                        tag: 'post_card_hero',
+                        createRectTween: createSmoothRectTween, // 加上自定義矩形補間
+                        // 移除 flightShuttleBuilder，使用 Flutter 預設的 Hero 行為
+                        // 這樣可以確保飛行中的 Widget 與實際 Widget 完全一致，不會有跳動
+                        child: Material(
+                          color: Colors.transparent,
+                          child: SingleChildScrollView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(
+                                  0.8,
+                                ), // 與 ResultScreen 一致
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.shadowPink.withOpacity(
+                                      0.4,
+                                    ),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 卡片頭部：使用者資訊
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      20,
+                                      20,
+                                      20,
+                                      0,
+                                    ), // 與 ResultScreen 完全一致
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 42, // 統一為 42
+                                          height: 42,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.darkGrey,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.person,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              "罪孽深重的靈魂", // 使用者名稱
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16, // 統一為 16
+                                                color: AppColors.darkGrey,
+                                              ),
+                                            ),
+                                            Text(
+                                              "撰寫新貼文...",
+                                              style: TextStyle(
+                                                fontSize: 12, // 統一為 12
+                                                color: AppColors.darkGrey
+                                                    .withOpacity(0.5),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // 輸入框
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ), // 與 ResultScreen 完全一致
+                                    child: TextField(
+                                      controller: _controller,
+                                      maxLines: 6,
+                                      minLines: 3,
+                                      keyboardType: TextInputType.multiline,
+                                      textInputAction: TextInputAction.newline,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: AppColors.darkGrey,
+                                        height: 1.5,
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: "今天發生了什麼事？\n和角色們分享吧...",
+                                        hintStyle: TextStyle(
+                                          color: AppColors.darkGrey.withOpacity(
+                                            0.3,
+                                          ),
+                                        ),
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding: EdgeInsets
+                                            .zero, // 移除內部 padding，外部已有
+                                        filled: true,
+                                        fillColor: Colors.transparent,
+                                      ),
+                                      onChanged: (value) => setState(() {}),
+                                    ),
+                                  ),
+
+                                  // 分隔線
+                                  Divider(
+                                    height: 1,
+                                    color: Colors.grey.withOpacity(0.1),
+                                  ),
+
+                                  // 底部工具列與發送按鈕
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
+                                      children: [
+                                        // 裝飾性按鈕
+                                        _buildActionButton(
+                                          Icons.image_outlined,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildActionButton(
+                                          Icons.location_on_outlined,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildActionButton(
+                                          Icons.sentiment_satisfied_rounded,
+                                        ),
+
+                                        const Spacer(),
+
+                                        // 發送按鈕
+                                        AnimatedScale(
+                                          scale:
+                                              _controller.text.trim().isNotEmpty
+                                              ? 1.0
+                                              : 0.95,
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          child: FilledButton.icon(
+                                            onPressed:
+                                                _controller.text.trim().isEmpty
+                                                ? null
+                                                : _startAnalysis,
+                                            icon: const Icon(
+                                              Icons.send_rounded,
+                                              size: 18,
+                                            ),
+                                            label: const Text("發佈"),
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor:
+                                                  AppColors.darkGrey,
+                                              disabledBackgroundColor: AppColors
+                                                  .darkGrey
+                                                  .withOpacity(0.2),
+                                              foregroundColor: Colors.white,
+                                              disabledForegroundColor: Colors
+                                                  .white
+                                                  .withOpacity(0.5),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 24,
+                                                    vertical: 12,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              elevation: 0,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ], // 外層 Column children 閉合
                 ),
               ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
-}
 
-// === 新增元件：呼吸按鈕 ===
-class _PulsingButton extends StatefulWidget {
-  @override
-  State<_PulsingButton> createState() => _PulsingButtonState();
-}
-
-class _PulsingButtonState extends State<_PulsingButton> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowPink,
-                blurRadius: 20 + (_controller.value * 20),
-                spreadRadius: 5 + (_controller.value * 10),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.edit_note_rounded,
-            size: 40,
-            color: AppColors.darkGrey,
-          ),
-        );
-      },
+  // 裝飾性的小按鈕
+  Widget _buildActionButton(IconData icon) {
+    return IconButton(
+      onPressed: () {}, // 暫無功能，但也加上點擊效果
+      icon: Icon(
+        icon,
+        size: 26,
+        color: AppColors.darkGrey.withOpacity(0.6),
+      ), // 放大 Icon
+      style: IconButton.styleFrom(
+        padding: EdgeInsets.zero, // 減少內距
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 縮小點擊區域佔位
+      ),
     );
   }
-}
 
-// === 新增元件：輸入 Modal ===
-class _InputModal extends StatelessWidget {
-  final TextEditingController controller;
-  final VoidCallback onSubmit;
-
-  const _InputModal({required this.controller, required this.onSubmit});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      // 使用 margin 讓 modal 看起來是懸浮的，縮小邊距 (16 -> 8)
-      margin: const EdgeInsets.all(8),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24, // 避開鍵盤並多留空間
-        left: 24,
-        right: 24,
-        top: 24,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(40), // 加大圓角 (32 -> 40)
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+  Widget _buildStoryAvatar(
+    String name,
+    String imagePath,
+    List<Color> gradientColors,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "告解時間",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkGrey,
+          Container(
+            padding: const EdgeInsets.all(2.5), // 調整邊框寬度
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              // 漸層邊框
+              gradient: LinearGradient(
+                colors: gradientColors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Container(
+              // 移除 padding 以消除白邊
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: Container(
+                width: 64, // 圖片顯示區域
+                height: 64,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                ),
+                child: ClipOval(
+                  child: Image.asset(imagePath, fit: BoxFit.contain),
                 ),
               ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, color: AppColors.darkGrey),
-              )
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: 4,
-            style: const TextStyle(fontSize: 18, color: AppColors.darkGrey),
-            decoration: const InputDecoration(
-              hintText: "今天發生了什麼...",
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
             ),
           ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: onSubmit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.darkGrey,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 16),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.darkGrey,
             ),
-            child: const Text("接受審判", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
-    );
-  }
-}
-
-// 輔助 StaggeredItem
-class _StaggeredItem extends StatelessWidget {
-  final AnimationController controller;
-  final Interval interval;
-  final Widget child;
-
-  const _StaggeredItem({
-    required this.controller,
-    required this.interval,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        final double value = interval.transform(controller.value);
-        final double opacity = value.clamp(0.0, 1.0);
-        final double slide = (1.0 - value) * 100.0;
-
-        return Transform.translate(
-          offset: Offset(0, slide),
-          child: Opacity(
-            opacity: opacity,
-            child: child,
-          ),
-        );
-      },
-      child: child,
     );
   }
 }
