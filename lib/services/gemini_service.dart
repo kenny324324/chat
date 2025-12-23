@@ -21,46 +21,14 @@ class GeminiService {
     _model = GenerativeModel(
       model: 'gemini-flash-latest',
       apiKey: apiKey,
-      generationConfig: GenerationConfig(responseMimeType: 'application/json'),
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+        temperature: 1.2, // 提高溫度，讓回應更有創意和真人感
+      ),
     );
   }
 
   Future<Map<String, dynamic>> analyzeAction(String userAction) async {
-    // 開發模式：直接回傳測試資料，避免消耗 API 額度
-    // 當需要正式連線時，請將此區塊註解掉或移除
-    const bool isDevMode = true;
-
-    if (isDevMode) {
-      await Future.delayed(const Duration(milliseconds: 800)); // 模擬網路延遲
-      return {
-        "characters": [
-          {
-            "name": "Softie",
-            "score": 95,
-            "comment": "哇！聽起來真的很棒呢！不管結果如何，你願意嘗試就很值得鼓勵了，要給自己一個大大的擁抱喔！",
-          },
-          {
-            "name": "Loyal",
-            "score": 98,
-            "comment": "汪汪！主人做什麼都是對的！我永遠支持你！你是最棒的！",
-          },
-          {
-            "name": "Nerdy",
-            "score": 82,
-            "comment": "根據初步分析，這個行為符合 82% 的邏輯效益。雖然還有優化空間，但在現有資源下已是最佳解。",
-          },
-          {"name": "Blunt", "score": 45, "comment": "就這樣？這不是基本操作嗎？沒什麼好大驚小怪的吧。"},
-          {
-            "name": "Chaotic",
-            "score": 88,
-            "comment": "這就像是把鳳梨加在披薩上一樣，雖然怪怪的但是... 喵嗚！突然好想吃罐罐！",
-          },
-        ],
-        "totalScore": 82,
-        "totalComment": "（開發模式測試資料）整體表現不錯！",
-      };
-    }
-
     if (_model == null) await init();
 
     final prompt =
@@ -95,6 +63,7 @@ class GeminiService {
     2. totalScore 為五個角色分數的平均值（整數）。
     3. 評論內容請用繁體中文，語氣要強烈符合角色個性。
     4. Softie 要很暖，Loyal 要很熱情，Nerdy 要很書呆子，Blunt 要很厭世，Chaotic 要很瘋。
+    5. 評論要針對使用者的具體行為，不要太通用或模糊。
     ''';
 
     try {

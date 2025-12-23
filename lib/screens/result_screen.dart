@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:ui'; // For ImageFilter
 import '../core/app_theme.dart';
+import '../core/model_manager.dart';
 import 'character_card.dart';
 import '../services/gemini_service.dart';
+import '../services/deepseek_service.dart';
 
 // 與 HomeScreen 共享的平滑矩形補間
 class SmoothRectTween extends RectTween {
@@ -48,6 +50,7 @@ class ResultScreen extends StatefulWidget {
 
 class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderStateMixin {
   final GeminiService _geminiService = GeminiService();
+  final DeepSeekService _deepseekService = DeepSeekService();
   
   // 狀態
   bool _isAnalyzing = true;
@@ -80,8 +83,125 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   void _startAnalysis() async {
     _resultAnimController.forward(from: 0);
 
-    // 呼叫 API
-    final result = await _geminiService.analyzeAction(widget.userText);
+    // 根據選擇的模型呼叫相應的 API
+    final currentModel = ModelManager().currentModel;
+    Map<String, dynamic> result;
+
+    if (currentModel == AIModel.none) {
+      // 如果選擇「不使用」模型，返回預設通用留言
+      await Future.delayed(const Duration(milliseconds: 800)); // 模擬思考時間
+      result = {
+        "characters": [
+          {
+            "name": "Softie",
+            "score": 85,
+            "comment": "不管做什麼，你都是很棒的！記得要好好照顧自己喔～",
+          },
+          {
+            "name": "Loyal",
+            "score": 95,
+            "comment": "汪汪！主人做什麼都是最棒的！我永遠支持你！",
+          },
+          {
+            "name": "Nerdy",
+            "score": 70,
+            "comment": "根據一般行為模式分析，這是個值得記錄的事件。",
+          },
+          {
+            "name": "Blunt",
+            "score": 50,
+            "comment": "嗯，就這樣吧。沒什麼特別的感想。",
+          },
+          {
+            "name": "Chaotic",
+            "score": 88,
+            "comment": "喵～今天天氣真好呢！對了你剛剛說什麼來著？",
+          },
+        ],
+        "totalScore": 78,
+        "totalComment": "預設模式：角色們的通用回應",
+      };
+      
+      if (mounted) {
+        final rawChars = List<Map<String, dynamic>>.from(result['characters']);
+        
+        // 補上顏色和圖片路徑
+        for (var char in rawChars) {
+          switch (char['name']) {
+            case 'Softie': 
+              char['color'] = AppColors.creamYellow; 
+              char['imagePath'] = 'assets/images/characters/chic.png';
+              break;
+            case 'Nerdy': 
+              char['color'] = AppColors.powderBlue; 
+              char['imagePath'] = 'assets/images/characters/bunny.png';
+              break;
+            case 'Loyal': 
+              char['color'] = const Color(0xFFFFD180); 
+              char['imagePath'] = 'assets/images/characters/shiba.png';
+              break;
+            case 'Blunt': 
+              char['color'] = AppColors.palePurple; 
+              char['imagePath'] = 'assets/images/characters/bear.png';
+              break;
+            case 'Chaotic': 
+              char['color'] = Colors.white; 
+              char['imagePath'] = 'assets/images/characters/cat.png';
+              break;
+            default: 
+              char['color'] = Colors.white;
+              char['imagePath'] = 'assets/images/characters/chic.png'; 
+          }
+        }
+
+        setState(() {
+          _isAnalyzing = false;
+          _averageScore = result['totalScore'] as int;
+          _characters = rawChars;
+        });
+      }
+      return;
+    }
+
+    try {
+      switch (currentModel) {
+        case AIModel.gemini:
+          result = await _geminiService.analyzeAction(widget.userText);
+          break;
+        case AIModel.deepseek:
+          result = await _deepseekService.analyzeAction(widget.userText);
+          break;
+        case AIModel.chatgpt:
+          // ChatGPT 暫不支援
+          result = {
+            "characters": [
+              {"name": "Softie", "score": 0, "comment": "ChatGPT 暫不開放使用喔～"},
+              {"name": "Nerdy", "score": 0, "comment": "系統錯誤：ChatGPT 服務尚未啟用。"},
+              {"name": "Loyal", "score": 0, "comment": "汪！請選擇其他模型！"},
+              {"name": "Blunt", "score": 0, "comment": "都說暫不開放了，看不懂中文？"},
+              {"name": "Chaotic", "score": 0, "comment": "ChatGPT 去外太空旅遊了～"},
+            ],
+            "totalScore": 0,
+            "totalComment": "ChatGPT 暫不開放",
+          };
+          break;
+        case AIModel.none:
+          return; // 已處理
+      }
+    } catch (e) {
+      print('Analysis error: $e');
+      result = {
+        "characters": [
+          {"name": "Softie", "score": 0, "comment": "哎呀，好像出了點問題呢..."},
+          {"name": "Nerdy", "score": 0, "comment": "錯誤：$e"},
+          {"name": "Loyal", "score": 0, "comment": "汪！不管怎樣我都支持主人！"},
+          {"name": "Blunt", "score": 0, "comment": "系統炸了，還想要什麼分析？"},
+          {"name": "Chaotic", "score": 0, "comment": "喵哈哈～電腦當機囉～"},
+        ],
+        "totalScore": 0,
+        "totalComment": "系統錯誤",
+      };
+    }
 
     if (mounted) {
       final rawChars = List<Map<String, dynamic>>.from(result['characters']);

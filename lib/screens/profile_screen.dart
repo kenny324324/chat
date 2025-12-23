@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../core/theme_manager.dart';
+import '../core/model_manager.dart';
 import '../core/app_animations.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -55,6 +56,12 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 40),
               
               // 設定選項列表
+              _buildSettingItem(
+                context,
+                icon: Icons.smart_toy_outlined, 
+                title: "AI 模型選擇",
+                onTap: () => _showModelSelectionModal(context),
+              ),
               _buildSettingItem(
                 context,
                 icon: Icons.text_fields_rounded, 
@@ -123,6 +130,56 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  void _showModelSelectionModal(BuildContext context) {
+    AppAnimations.showBouncingModal(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "選擇 AI 模型",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkGrey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "選擇用於分析你行為的 AI 模型",
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.darkGrey.withOpacity(0.6),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildModelOption(context, AIModel.none),
+            _buildModelOption(context, AIModel.gemini),
+            _buildModelOption(context, AIModel.deepseek),
+            _buildModelOption(context, AIModel.chatgpt, isLast: true),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showFontSelectionModal(BuildContext context) {
     AppAnimations.showBouncingModal(
       context: context,
@@ -162,6 +219,71 @@ class ProfileScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildModelOption(BuildContext context, AIModel model, {bool isLast = false}) {
+    return ListenableBuilder(
+      listenable: ModelManager(),
+      builder: (context, _) {
+        final isSelected = ModelManager().currentModel == model;
+        final isDisabled = model == AIModel.chatgpt;
+        
+        return GestureDetector(
+          onTap: isDisabled ? null : () {
+            ModelManager().setModel(model);
+            Navigator.pop(context);
+          },
+          child: Container(
+            margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: isDisabled 
+                  ? AppColors.darkGrey.withOpacity(0.1)
+                  : isSelected 
+                      ? AppColors.darkGrey 
+                      : AppColors.skinPink.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(20),
+              border: isSelected ? null : Border.all(color: AppColors.darkGrey.withOpacity(0.1)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      model.displayName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDisabled
+                            ? AppColors.darkGrey.withOpacity(0.4)
+                            : isSelected 
+                                ? Colors.white 
+                                : AppColors.darkGrey,
+                      ),
+                    ),
+                    if (isDisabled)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          "暫不開放",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.darkGrey.withOpacity(0.4),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (isSelected)
+                  const Icon(Icons.check_circle, color: Colors.white)
+              ],
+            ),
+          ),
+        );
+      }
     );
   }
 

@@ -23,25 +23,70 @@ class AppAnimations {
         return Builder(builder: builder);
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        // 使用自定義的彈性曲線
-        final curvedAnimation = CurvedAnimation(
+        // Sheet 內容：使用彈性曲線（會彈過頭再回來）
+        final bouncyAnimation = CurvedAnimation(
           parent: animation,
           curve: springCurve,
-          reverseCurve: Curves.easeInCubic, // 收起時不需要彈性，快速收起即可
+          reverseCurve: Curves.easeInCubic,
         );
 
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 1), // 從下方螢幕外開始
-            end: Offset.zero,          // 停在原位
-          ).animate(curvedAnimation),
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Material(
-              color: Colors.transparent,
-              child: child, // 這裡的 child 就是我們傳入的 Modal 內容
+        // 底部填補區域：使用普通曲線（不彈跳，直接停在底部）
+        final smoothAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+
+        return Stack(
+          children: [
+            // 底部填補區域：只在開啟動畫時顯示，完成後消失
+            // 當 Sheet 往上彈時，這個白色區域會遮住露出的空隙
+            AnimatedBuilder(
+              animation: animation,
+              builder: (context, _) {
+                // 只在動畫進行中顯示（未完成時），完成後隱藏
+                // animation.status == forward 表示正在開啟
+                final isOpening = animation.status == AnimationStatus.forward;
+                if (!isOpening) return const SizedBox.shrink();
+                
+                return Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 1),
+                      end: Offset.zero,
+                    ).animate(smoothAnimation),
+                    child: Container(
+                      height: 80,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(32),
+                          topRight: Radius.circular(32),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          ),
+            // Sheet 內容：會隨動畫彈跳
+            SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1), // 從下方螢幕外開始
+                end: Offset.zero,          // 停在原位
+              ).animate(bouncyAnimation),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Material(
+                  color: Colors.transparent,
+                  child: child,
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
