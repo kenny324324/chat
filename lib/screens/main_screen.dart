@@ -3,7 +3,7 @@ import 'dart:ui'; // For ImageFilter
 import '../core/app_theme.dart';
 import 'home_screen.dart';
 import 'history_screen.dart';
-import 'profile_screen.dart';
+import 'settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,18 +20,29 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final List<Widget> _screens = const [
     HistoryScreen(),
     HomeScreen(),
-    ProfileScreen(),
+    SettingsScreen(), // 設定頁面
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      resizeToAvoidBottomInset: false, // 防止鍵盤頂起導航列，雖然首頁有自己的處理邏輯
+      body: Stack( // 使用 Stack 確保 body 延伸到全螢幕，包括 bottomNavigationBar 後方
+        children: [
+          IndexedStack(
+            index: _currentIndex,
+            children: _screens,
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildFloatingTabBar(),
+          ),
+        ],
       ),
-      bottomNavigationBar: _buildFloatingTabBar(),
+      // bottomNavigationBar: _buildFloatingTabBar(), // 移除 Scaffold 的 bottomNavigationBar 屬性
     );
   }
 
@@ -72,11 +83,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   builder: (context, constraints) {
                     final totalWidth = constraints.maxWidth;
                     const double padding = 12.0;
-                    // 扣除邊框寬度，雖然只有 1.5 但精確一點好，不過 LayoutBuilder 給的是 constraints
-                    // border 繪製在內部嗎？Container border 是畫在 padding 外圍。
-                    // 為了避免內容偏移，LayoutBuilder 拿到的 constraints 已經是扣除 border 後的空間了嗎？
-                    // 不，Container 的 child 會被 border 包住。
                     
+                    // 改為 3 個 tab
                     final double tabWidth = (totalWidth - (padding * 2)) / 3;
 
                     return Stack(
@@ -102,9 +110,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           padding: const EdgeInsets.all(padding),
                           child: Row(
                             children: [
-                              _buildTabItem(0, Icons.history_rounded),
-                              _buildTabItem(1, Icons.gavel_rounded),
-                              _buildTabItem(2, Icons.person_outline_rounded),
+                              _buildTabItem(0, Icons.person_outline_rounded), // 回憶錄 (現在也是個人檔案)
+                              _buildTabItem(1, Icons.edit_square), // 首頁 (改為寫字筆圖示)
+                              _buildTabItem(2, Icons.settings), // 設定
                             ],
                           ),
                         ),

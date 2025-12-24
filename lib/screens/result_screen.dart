@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui'; // For ImageFilter
 import '../core/app_theme.dart';
 import '../core/model_manager.dart';
+import '../core/history_manager.dart';
 import 'character_card.dart';
 import '../services/gemini_service.dart';
 import '../services/deepseek_service.dart';
@@ -38,10 +39,14 @@ RectTween createSmoothRectTween(Rect? begin, Rect? end) {
 
 class ResultScreen extends StatefulWidget {
   final String userText;
+  final HistoryRecord? historyRecord; // 如果是從歷史紀錄進入，則會有值
+  final String? heroTag; // 用於 Hero 動畫的 tag
 
   const ResultScreen({
     super.key,
     required this.userText,
+    this.historyRecord,
+    this.heroTag,
   });
 
   @override
@@ -77,7 +82,59 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       {'name': 'Chaotic', 'imagePath': 'assets/images/characters/cat.png', 'color': Colors.white, 'score': 0, 'comment': ''},
     ];
 
-    _startAnalysis();
+    if (widget.historyRecord != null) {
+      _loadHistoryRecord();
+    } else {
+      _startAnalysis();
+    }
+  }
+
+  void _loadHistoryRecord() {
+    final record = widget.historyRecord!;
+    final rawChars = record.characters.map((c) => c.toJson()).toList();
+    
+    // 補上顏色和圖片路徑
+    for (var char in rawChars) {
+      _enrichCharacterData(char);
+    }
+
+    setState(() {
+      _isAnalyzing = false;
+      _averageScore = record.totalScore;
+      _characters = rawChars;
+    });
+    
+    // 立即顯示動畫
+    _resultAnimController.forward();
+  }
+
+  // 輔助方法：補全角色顯示資料
+  void _enrichCharacterData(Map<String, dynamic> char) {
+    switch (char['name']) {
+      case 'Softie': 
+        char['color'] = AppColors.creamYellow; 
+        char['imagePath'] = 'assets/images/characters/chic.png';
+        break;
+      case 'Nerdy': 
+        char['color'] = AppColors.powderBlue; 
+        char['imagePath'] = 'assets/images/characters/bunny.png';
+        break;
+      case 'Loyal': 
+        char['color'] = const Color(0xFFFFD180); 
+        char['imagePath'] = 'assets/images/characters/shiba.png';
+        break;
+      case 'Blunt': 
+        char['color'] = AppColors.palePurple; 
+        char['imagePath'] = 'assets/images/characters/bear.png';
+        break;
+      case 'Chaotic': 
+        char['color'] = Colors.white; 
+        char['imagePath'] = 'assets/images/characters/cat.png';
+        break;
+      default: 
+        char['color'] = Colors.white;
+        char['imagePath'] = 'assets/images/characters/chic.png'; 
+    }
   }
 
   void _startAnalysis() async {
@@ -127,32 +184,15 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         
         // 補上顏色和圖片路徑
         for (var char in rawChars) {
-          switch (char['name']) {
-            case 'Softie': 
-              char['color'] = AppColors.creamYellow; 
-              char['imagePath'] = 'assets/images/characters/chic.png';
-              break;
-            case 'Nerdy': 
-              char['color'] = AppColors.powderBlue; 
-              char['imagePath'] = 'assets/images/characters/bunny.png';
-              break;
-            case 'Loyal': 
-              char['color'] = const Color(0xFFFFD180); 
-              char['imagePath'] = 'assets/images/characters/shiba.png';
-              break;
-            case 'Blunt': 
-              char['color'] = AppColors.palePurple; 
-              char['imagePath'] = 'assets/images/characters/bear.png';
-              break;
-            case 'Chaotic': 
-              char['color'] = Colors.white; 
-              char['imagePath'] = 'assets/images/characters/cat.png';
-              break;
-            default: 
-              char['color'] = Colors.white;
-              char['imagePath'] = 'assets/images/characters/chic.png'; 
-          }
+          _enrichCharacterData(char);
         }
+
+        // 儲存到歷史紀錄 (預設模式也要存)
+        await HistoryManager().addRecord(
+          userText: widget.userText,
+          totalScore: result['totalScore'] as int,
+          rawCharacters: rawChars,
+        );
 
         setState(() {
           _isAnalyzing = false;
@@ -208,32 +248,15 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       
       // 補上顏色和圖片路徑
       for (var char in rawChars) {
-        switch (char['name']) {
-          case 'Softie': 
-            char['color'] = AppColors.creamYellow; 
-            char['imagePath'] = 'assets/images/characters/chic.png';
-            break;
-          case 'Nerdy': 
-            char['color'] = AppColors.powderBlue; 
-            char['imagePath'] = 'assets/images/characters/bunny.png';
-            break;
-          case 'Loyal': 
-            char['color'] = const Color(0xFFFFD180); 
-            char['imagePath'] = 'assets/images/characters/shiba.png';
-            break;
-          case 'Blunt': 
-            char['color'] = AppColors.palePurple; 
-            char['imagePath'] = 'assets/images/characters/bear.png';
-            break;
-          case 'Chaotic': 
-            char['color'] = Colors.white; 
-            char['imagePath'] = 'assets/images/characters/cat.png';
-            break;
-          default: 
-            char['color'] = Colors.white;
-            char['imagePath'] = 'assets/images/characters/chic.png'; 
-        }
+        _enrichCharacterData(char);
       }
+
+      // 儲存到歷史紀錄
+      await HistoryManager().addRecord(
+        userText: widget.userText,
+        totalScore: result['totalScore'] as int,
+        rawCharacters: rawChars,
+      );
 
       setState(() {
         _isAnalyzing = false;
@@ -371,29 +394,26 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   // 使用者貼文卡片 (唯讀，Hero 目標)
   Widget _buildUserPostCard() {
-    return Hero(
-      tag: 'post_card_hero',
-      createRectTween: createSmoothRectTween, // 加上自定義矩形補間
-      child: Material( // 確保 Material 包裹以避免溢出警告
-        color: Colors.transparent,
-        child: SingleChildScrollView( // 加上 SingleChildScrollView 以防內容過長
-          physics: const NeverScrollableScrollPhysics(), // 這裡通常不需要捲動
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Colors.white,
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadowPink.withOpacity(0.2),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+    Widget cardContent = Material( // 確保 Material 包裹以避免溢出警告
+      color: Colors.transparent,
+      child: SingleChildScrollView( // 加上 SingleChildScrollView 以防內容過長
+        physics: const NeverScrollableScrollPhysics(), // 這裡通常不需要捲動
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white,
+              width: 2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadowPink.withOpacity(0.2),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min, // 加上這行，確保 Column 只佔用最小高度
@@ -470,8 +490,17 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           ),
         ),
       ),
-    ),
     );
+
+    if (widget.heroTag != null) {
+      return Hero(
+        tag: widget.heroTag!,
+        createRectTween: createSmoothRectTween, // 加上自定義矩形補間
+        child: cardContent,
+      );
+    }
+
+    return cardContent;
   }
   
   Widget _buildActionButton(IconData icon) {

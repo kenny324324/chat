@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/app_theme.dart';
 import 'core/theme_manager.dart';
 import 'core/model_manager.dart';
+import 'core/history_manager.dart';
 import 'screens/main_screen.dart';
 
 void main() async {
@@ -20,6 +21,9 @@ void main() async {
   
   // 初始化模型管理器,載入儲存的模型設定
   await ModelManager().initialize();
+
+  // 初始化歷史紀錄
+  await HistoryManager().initialize();
   
   runApp(const MyApp());
 }

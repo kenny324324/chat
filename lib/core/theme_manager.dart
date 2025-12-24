@@ -21,8 +21,13 @@ class ThemeManager extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final savedFont = prefs.getString(_fontFamilyKey);
     
-    // 如果沒有儲存過設定,savedFont 會是 null,這樣就會使用系統預設
-    _currentFontFamily = savedFont;
+    // 如果沒有儲存過設定,savedFont 會是 null,這樣就會使用預設字體(粉圓體)
+    // 或者如果之前儲存的是空字串(舊的系統預設),也改為使用粉圓體
+    if (savedFont == null || savedFont.isEmpty) {
+      _currentFontFamily = 'OpenHuninn';
+    } else {
+      _currentFontFamily = savedFont;
+    }
     _isInitialized = true;
     notifyListeners();
   }

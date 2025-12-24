@@ -122,3 +122,9 @@ flutter:
     - family: Handwriting
       fonts:
         - asset: assets/fonts/JasonHandwriting8p.ttf
+    - family: NaniFont
+      fonts:
+        - asset: assets/fonts/NaniFont-Regular.ttf
+    - family: AutoPencil
+      fonts:
+        - asset: assets/fonts/宅在家自動筆20251116.ttf

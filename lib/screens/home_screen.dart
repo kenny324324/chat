@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui'; // For ImageFilter
 import '../core/app_theme.dart';
 import 'result_screen.dart';
+import '../widgets/settings_modal.dart'; // 引入 SettingsModal
 
 // 自定義 Hero 矩形補間，讓高度變化更平滑
 class SmoothRectTween extends RectTween {
@@ -77,7 +78,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         transitionDuration: const Duration(milliseconds: 600), // 加快到 600ms
         reverseTransitionDuration: const Duration(milliseconds: 450), // 返回也加快
         pageBuilder: (context, animation, secondaryAnimation) =>
-            ResultScreen(userText: _controller.text),
+            ResultScreen(
+              userText: _controller.text,
+              heroTag: 'post_card_hero', // 從首頁進入時啟用 Hero
+            ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           // 進入時：快速淡入
           var fadeIn = CurvedAnimation(
@@ -127,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    "今日動態", // 修改標題
+                    "SoulFeed",
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
@@ -137,6 +141,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   Row(
                     children: [
+                      // 設定按鈕
+                      IconButton(
+                        onPressed: () => SettingsModal.show(context),
+                        icon: const Icon(Icons.settings, color: AppColors.darkGrey),
+                        style: IconButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       // 愛心圖示 (純裝飾，不可點擊)
                       const Icon(
                         Icons.favorite_border_rounded,
