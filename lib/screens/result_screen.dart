@@ -3,6 +3,7 @@ import 'dart:ui'; // For ImageFilter
 import '../core/app_theme.dart';
 import '../core/model_manager.dart';
 import '../core/history_manager.dart';
+import '../core/character_manager.dart'; // Import CharacterManager
 import 'character_card.dart';
 import '../services/gemini_service.dart';
 import '../services/deepseek_service.dart';
@@ -73,19 +74,35 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       duration: const Duration(milliseconds: 1200),
     );
     
-    // 設置初始佔位資料
-    _characters = [
-      {'name': 'Softie', 'imagePath': 'assets/images/characters/chic.png', 'color': AppColors.creamYellow, 'score': 0, 'comment': ''},
-      {'name': 'Nerdy', 'imagePath': 'assets/images/characters/bunny.png', 'color': AppColors.powderBlue, 'score': 0, 'comment': ''},
-      {'name': 'Loyal', 'imagePath': 'assets/images/characters/shiba.png', 'color': const Color(0xFFFFD180), 'score': 0, 'comment': ''},
-      {'name': 'Blunt', 'imagePath': 'assets/images/characters/bear.png', 'color': AppColors.palePurple, 'score': 0, 'comment': ''},
-      {'name': 'Chaotic', 'imagePath': 'assets/images/characters/cat.png', 'color': Colors.white, 'score': 0, 'comment': ''},
-    ];
+    // 設置初始佔位資料 (從 CharacterManager 載入)
+    _loadInitialPlaceholders();
 
     if (widget.historyRecord != null) {
       _loadHistoryRecord();
     } else {
       _startAnalysis();
+    }
+  }
+
+  void _loadInitialPlaceholders() {
+    final characters = CharacterManager().characters;
+    if (characters.isNotEmpty) {
+      _characters = characters.map((c) => {
+        'name': c.name,
+        'imagePath': c.avatarPath,
+        'color': c.color,
+        'score': 0,
+        'comment': '',
+      }).toList();
+    } else {
+      // Fallback: 使用寫死的預設資料，避免畫面空白
+      _characters = [
+        {'name': 'Softie', 'imagePath': 'assets/images/characters/chic.png', 'color': AppColors.creamYellow, 'score': 0, 'comment': ''},
+        {'name': 'Loyal', 'imagePath': 'assets/images/characters/shiba.png', 'color': const Color(0xFFFFD180), 'score': 0, 'comment': ''},
+        {'name': 'Nerdy', 'imagePath': 'assets/images/characters/bunny.png', 'color': AppColors.powderBlue, 'score': 0, 'comment': ''},
+        {'name': 'Blunt', 'imagePath': 'assets/images/characters/bear.png', 'color': AppColors.palePurple, 'score': 0, 'comment': ''},
+        {'name': 'Chaotic', 'imagePath': 'assets/images/characters/cat.png', 'color': Colors.white, 'score': 0, 'comment': ''},
+      ];
     }
   }
 
@@ -108,32 +125,41 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     _resultAnimController.forward();
   }
 
-  // 輔助方法：補全角色顯示資料
-  void _enrichCharacterData(Map<String, dynamic> char) {
-    switch (char['name']) {
-      case 'Softie': 
-        char['color'] = AppColors.creamYellow; 
-        char['imagePath'] = 'assets/images/characters/chic.png';
-        break;
-      case 'Nerdy': 
-        char['color'] = AppColors.powderBlue; 
-        char['imagePath'] = 'assets/images/characters/bunny.png';
-        break;
-      case 'Loyal': 
-        char['color'] = const Color(0xFFFFD180); 
-        char['imagePath'] = 'assets/images/characters/shiba.png';
-        break;
-      case 'Blunt': 
-        char['color'] = AppColors.palePurple; 
-        char['imagePath'] = 'assets/images/characters/bear.png';
-        break;
-      case 'Chaotic': 
-        char['color'] = Colors.white; 
-        char['imagePath'] = 'assets/images/characters/cat.png';
-        break;
-      default: 
-        char['color'] = Colors.white;
-        char['imagePath'] = 'assets/images/characters/chic.png'; 
+  // 輔助方法：補全角色顯示資料 (動態查找 + 寫死 fallback)
+  void _enrichCharacterData(Map<String, dynamic> charData) {
+    final name = charData['name'];
+    final character = CharacterManager().getCharacterByName(name);
+    
+    if (character != null) {
+      charData['color'] = character.color;
+      charData['imagePath'] = character.avatarPath;
+    } else {
+      // Fallback: 根據名字用寫死的對應
+      switch (name) {
+        case 'Softie':
+          charData['color'] = AppColors.creamYellow;
+          charData['imagePath'] = 'assets/images/characters/chic.png';
+          break;
+        case 'Loyal':
+          charData['color'] = const Color(0xFFFFD180);
+          charData['imagePath'] = 'assets/images/characters/shiba.png';
+          break;
+        case 'Nerdy':
+          charData['color'] = AppColors.powderBlue;
+          charData['imagePath'] = 'assets/images/characters/bunny.png';
+          break;
+        case 'Blunt':
+          charData['color'] = AppColors.palePurple;
+          charData['imagePath'] = 'assets/images/characters/bear.png';
+          break;
+        case 'Chaotic':
+          charData['color'] = Colors.white;
+          charData['imagePath'] = 'assets/images/characters/cat.png';
+          break;
+        default:
+          charData['color'] = Colors.white;
+          charData['imagePath'] = 'assets/images/characters/chic.png';
+      }
     }
   }
 
@@ -515,6 +541,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   }
 }
 
+// 補回遺失的 Widget
 class _StaggeredItem extends StatelessWidget {
   final AnimationController controller;
   final Interval interval;
@@ -547,4 +574,3 @@ class _StaggeredItem extends StatelessWidget {
     );
   }
 }
-

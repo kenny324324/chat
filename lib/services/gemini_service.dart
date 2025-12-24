@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../core/character_manager.dart';
 
 class GeminiService {
   static final GeminiService _instance = GeminiService._internal();
@@ -31,40 +32,7 @@ class GeminiService {
   Future<Map<String, dynamic>> analyzeAction(String userAction) async {
     if (_model == null) await init();
 
-    final prompt =
-        '''
-    你是一個多重人格 AI 評判系統。使用者會輸入他們今天做的一件事，你需要扮演 5 個不同的角色來評論這件事。
-
-    角色設定：
-    1. Softie (小雞): 溫柔、安慰、療癒、總是往好處想，像個溫暖的媽媽或知心好友。分數範圍：80-100。
-    2. Loyal (柴犬): 熱情、忠誠、無條件支持主人、有點呆萌激動，不管主人做什麼都是對的！分數範圍：75-100。
-    3. Nerdy (兔子): 理性、分析、科普知識、注重邏輯與效率，會用數據或理論來分析行為。分數範圍：50-90。
-    4. Blunt (熊): 厭世、直率、毒舌、一針見血、冷淡，喜歡吐槽不合理的地方。分數範圍：10-60。
-    5. Chaotic (貓): 混亂、跳躍性思考、搗蛋、看心情給分，評論可能完全無關或非常無厘頭。分數範圍：0-100。
-
-    使用者輸入："$userAction"
-
-    請回傳一個 JSON 物件，格式如下：
-    {
-      "characters": [
-        {
-          "name": "Softie",
-          "score": 95,
-          "comment": "你的評論內容"
-        },
-        ... 其他角色
-      ],
-      "totalScore": 75,
-      "totalComment": "簡短的總評"
-    }
-
-    請確保：
-    1. JSON 格式正確。
-    2. totalScore 為五個角色分數的平均值（整數）。
-    3. 評論內容請用繁體中文，語氣要強烈符合角色個性。
-    4. Softie 要很暖，Loyal 要很熱情，Nerdy 要很書呆子，Blunt 要很厭世，Chaotic 要很瘋。
-    5. 評論要針對使用者的具體行為，不要太通用或模糊。
-    ''';
+    final prompt = _generatePrompt(userAction);
 
     try {
       final content = [Content.text(prompt)];
@@ -81,7 +49,7 @@ class GeminiService {
       return jsonDecode(jsonString);
     } catch (e) {
       print('Gemini API Error: $e');
-      // 回傳錯誤時的備用資料
+      // 回傳錯誤時的備用資料 (這裡也可以優化為動態生成，但暫時保留寫死以防萬一)
       return {
         "characters": [
           {
@@ -102,5 +70,54 @@ class GeminiService {
         "totalComment": "系統連線異常",
       };
     }
+  }
+
+  String _generatePrompt(String userAction) {
+    final characters = CharacterManager().characters;
+    StringBuffer sb = StringBuffer();
+
+    sb.writeln("你是一個多重人格 AI 評判系統。使用者會輸入他們今天做的一件事，你需要扮演 ${characters.length} 個不同的角色來評論這件事。");
+    sb.writeln("");
+    sb.writeln("角色設定：");
+
+    if (characters.isNotEmpty) {
+      // 動態生成角色設定
+      for (int i = 0; i < characters.length; i++) {
+        final c = characters[i];
+        sb.writeln("${i + 1}. ${c.name} (${c.displayName}): ${c.description} 分數範圍：${c.scoreRange}。 Prompt 指導：${c.prompt}");
+      }
+    } else {
+      // 備份用的寫死設定 (以防萬一)
+      sb.writeln("1. Softie (小雞): 溫柔、安慰、療癒。分數範圍：80-100。");
+      sb.writeln("2. Loyal (柴犬): 熱情、忠誠、無條件支持主人。分數範圍：75-100。");
+      sb.writeln("3. Nerdy (兔子): 理性、分析、科普知識。分數範圍：50-90。");
+      sb.writeln("4. Blunt (熊): 厭世、直率、毒舌。分數範圍：10-60。");
+      sb.writeln("5. Chaotic (貓): 混亂、跳躍性思考。分數範圍：0-100。");
+    }
+
+    sb.writeln("");
+    sb.writeln('使用者輸入："$userAction"');
+    sb.writeln("");
+    sb.writeln("請回傳一個 JSON 物件，格式如下：");
+    sb.writeln("{");
+    sb.writeln('  "characters": [');
+    sb.writeln('    {');
+    sb.writeln('      "name": "角色英文名稱 (必須與上述設定完全一致)",');
+    sb.writeln('      "score": 95,');
+    sb.writeln('      "comment": "你的評論內容"');
+    sb.writeln('    },');
+    sb.writeln('    ... 其他角色');
+    sb.writeln('  ],');
+    sb.writeln('  "totalScore": 75,');
+    sb.writeln('  "totalComment": "簡短的總評"');
+    sb.writeln("}");
+    sb.writeln("");
+    sb.writeln("請確保：");
+    sb.writeln("1. JSON 格式正確。");
+    sb.writeln("2. totalScore 為五個角色分數的平均值（整數）。");
+    sb.writeln("3. 評論內容請用繁體中文，語氣要強烈符合角色個性。");
+    sb.writeln("4. 評論要針對使用者的具體行為，不要太通用或模糊。");
+
+    return sb.toString();
   }
 }

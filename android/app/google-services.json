@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "919289861778",
+    "project_id": "soulfeed-80174",
+    "storage_bucket": "soulfeed-80174.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:919289861778:android:d152c40d36835674dcf84b",
+        "android_client_info": {
+          "package_name": "com.kenny.soulfeed"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN1tlR2ocQQu9edyY7P-IFVjpKbQypWPw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
