@@ -17,6 +17,13 @@ class AppTheme {
       fontFamily: fontFamily,
       scaffoldBackgroundColor: AppColors.skinPink,
       primaryColor: AppColors.darkGrey,
+      
+      // 移除全域水波紋動畫
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      splashFactory: NoSplash.splashFactory,
+      
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.skinPink,
         primary: AppColors.darkGrey,
@@ -42,10 +49,27 @@ class AppTheme {
           backgroundColor: AppColors.darkGrey,
           foregroundColor: Colors.white,
           elevation: 0,
+          splashFactory: NoSplash.splashFactory, // 確保按鈕也被設定
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        ),
+      ),
+      // 針對其他按鈕類型也一併設定，確保萬無一失
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          splashFactory: NoSplash.splashFactory,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          splashFactory: NoSplash.splashFactory,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          highlightColor: Colors.transparent,
         ),
       ),
     );

@@ -24,25 +24,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.skinPink,
       body: SafeArea(
-        child: ListenableBuilder(
-          listenable: HistoryManager(),
-          builder: (context, _) {
-            final records = HistoryManager().records;
+        child: Column(
+          children: [
+            // Simple Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Row(
+                children: [
+                  Text(
+                    "動態牆",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.darkGrey,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // List
+            Expanded(
+              child: ListenableBuilder(
+                listenable: HistoryManager(),
+                builder: (context, _) {
+                  final records = HistoryManager().records;
 
-            return CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // 1. Profile Header (as Sliver)
-                SliverToBoxAdapter(
-                  child: _buildProfileHeader(context),
-                ),
-
-                // 2. Content List or Empty State
-                if (records.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
+                  if (records.isEmpty) {
+                    return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -63,241 +73,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                         ],
                       ),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100), // 底部增加 padding 避免被 tabbar 遮擋
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final record = records[index];
-                          return _buildHistoryCard(context, record);
-                        },
-                        childCount: records.length,
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
+                    );
+                  }
 
-  Widget _buildProfileHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 第一行：名字與頭像
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        "罪孽深重的靈魂",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.darkGrey,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      // 認證勾勾
-                      Icon(Icons.verified, color: AppColors.darkGrey, size: 20),
-                      const SizedBox(width: 4),
-                      // 紅點
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "@soul_feeder",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.darkGrey.withOpacity(0.6),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                  return ListView.builder(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                    itemCount: records.length,
+                    itemBuilder: (context, index) {
+                      final record = records[index];
+                      return _buildHistoryCard(context, record);
+                    },
+                  );
+                },
               ),
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: AppTheme.softShadow,
-                ),
-                child: const Icon(Icons.person, size: 36, color: AppColors.darkGrey),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Bio
-          const Text(
-            "-INFJ-\n-Daily,Mood,2002-",
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.darkGrey,
-              height: 1.4,
             ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Follower info
-          Row(
-            children: [
-              SizedBox(
-                width: 70, 
-                height: 20,
-                child: Stack(
-                  children: [
-                     Positioned(left: 0, child: _buildTinyAvatar('assets/images/characters/chic.png', AppColors.creamYellow)),
-                     Positioned(left: 12, child: _buildTinyAvatar('assets/images/characters/shiba.png', const Color(0xFFFFD180))),
-                     Positioned(left: 24, child: _buildTinyAvatar('assets/images/characters/bunny.png', AppColors.powderBlue)),
-                     Positioned(left: 36, child: _buildTinyAvatar('assets/images/characters/bear.png', AppColors.palePurple)),
-                     Positioned(left: 48, child: _buildTinyAvatar('assets/images/characters/cat.png', Colors.white)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                "5 followers",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.darkGrey.withOpacity(0.5),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {}, // 暫時為空
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.darkGrey.withOpacity(0.2)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    backgroundColor: Colors.white,
-                  ),
-                  child: const Text(
-                    "編輯檔案",
-                    style: TextStyle(
-                      color: AppColors.darkGrey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.darkGrey.withOpacity(0.2)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    backgroundColor: Colors.white,
-                  ),
-                  child: const Text(
-                    "分享檔案",
-                    style: TextStyle(
-                      color: AppColors.darkGrey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Tab Indicator (Threads / Replies)
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    const Text(
-                      "貼文",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkGrey,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(height: 2, color: AppColors.darkGrey),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      "回覆",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkGrey.withOpacity(0.3),
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(height: 1, color: AppColors.darkGrey.withOpacity(0.1)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          // Divider
-          Container(height: 1, color: AppColors.darkGrey.withOpacity(0.1)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTinyAvatar(String imagePath, Color color) {
-    return Container(
-      width: 20, 
-      height: 20,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 1.5),
-      ),
-      child: ClipOval(
-        child: Padding(
-          padding: const EdgeInsets.all(2),
-          child: Image.asset(imagePath, fit: BoxFit.contain),
+          ],
         ),
       ),
     );

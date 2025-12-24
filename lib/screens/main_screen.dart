@@ -3,7 +3,8 @@ import 'dart:ui'; // For ImageFilter
 import '../core/app_theme.dart';
 import 'home_screen.dart';
 import 'history_screen.dart';
-import 'settings_screen.dart';
+import 'profile_screen.dart';
+import 'settings_screen.dart'; // 暫時保留引用，避免如果有其他地方用到
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,7 +21,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final List<Widget> _screens = const [
     HistoryScreen(),
     HomeScreen(),
-    SettingsScreen(), // 設定頁面
+    ProfileScreen(), // 改為個人資料頁面
   ];
 
   @override
@@ -110,9 +111,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           padding: const EdgeInsets.all(padding),
                           child: Row(
                             children: [
-                              _buildTabItem(0, Icons.person_outline_rounded), // 回憶錄 (現在也是個人檔案)
-                              _buildTabItem(1, Icons.edit_square), // 首頁 (改為寫字筆圖示)
-                              _buildTabItem(2, Icons.settings), // 設定
+                              _buildTabItem(0, Icons.menu_book_rounded), // 回憶錄 (書本/紀錄)
+                              _buildTabItem(1, Icons.auto_awesome_rounded), // 首頁 (AI 生成感)
+                              _buildTabItem(2, Icons.person_rounded), // 個人資料 (User)
                             ],
                           ),
                         ),
