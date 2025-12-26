@@ -81,9 +81,45 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
     if (widget.historyRecord != null) {
       _loadHistoryRecord();
+      
+      // 監聽 HistoryManager 的變化，以便即時更新
+      HistoryManager().addListener(_onHistoryUpdated);
     } else {
       _startAnalysis();
     }
+  }
+
+  void _onHistoryUpdated() {
+    // 當歷史記錄更新時，重新載入對應的記錄
+    if (widget.historyRecord != null) {
+      final updatedRecord = HistoryManager().records
+          .firstWhere((r) => r.id == widget.historyRecord!.id, 
+                      orElse: () => widget.historyRecord!);
+      
+      print("🔄 偵測到歷史記錄更新，重新載入 ID: ${updatedRecord.id}");
+      print("   更新後角色數量: ${updatedRecord.characters.length}");
+      
+      final rawChars = updatedRecord.characters.map((c) => c.toJson()).toList();
+      
+      // 補上顏色和圖片路徑
+      for (var char in rawChars) {
+        _enrichCharacterData(char);
+      }
+
+      setState(() {
+        _averageScore = updatedRecord.totalScore;
+        _characters = rawChars;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.historyRecord != null) {
+      HistoryManager().removeListener(_onHistoryUpdated);
+    }
+    _resultAnimController.dispose();
+    super.dispose();
   }
 
   void _loadInitialPlaceholders() {
@@ -110,6 +146,12 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   void _loadHistoryRecord() {
     final record = widget.historyRecord!;
+    print("📖 載入歷史記錄 ID: ${record.id}");
+    print("   角色回答數量: ${record.characters.length}");
+    for (var char in record.characters) {
+      print("   - ${char.name}: ${char.comment.substring(0, char.comment.length > 20 ? 20 : char.comment.length)}...");
+    }
+    
     final rawChars = record.characters.map((c) => c.toJson()).toList();
     
     // 補上顏色和圖片路徑
@@ -329,12 +371,6 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   }
 
   @override
-  void dispose() {
-    _resultAnimController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: !_isAnalyzing, // 只有在不是分析中時才允許返回
@@ -497,7 +533,11 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                   initialData: AuthService().currentUser, // 關鍵：設定初始資料！
                   builder: (context, snapshot) {
                     final user = snapshot.data;
-                    final displayName = user?.displayName ?? "訪客";
+                    // 已登入但沒設定名稱 → 「匿名」
+                    // 未登入 → 「訪客」
+                    final displayName = user != null
+                      ? (user.displayName?.isNotEmpty == true ? user.displayName! : "匿名")
+                      : "訪客";
                     final photoURL = user?.photoURL;
                     
                     return Row(

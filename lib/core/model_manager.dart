@@ -26,7 +26,7 @@ class ModelManager extends ChangeNotifier {
   ModelManager._internal();
 
   static const String _modelKey = 'selected_ai_model';
-  AIModel _currentModel = AIModel.none;
+  AIModel _currentModel = AIModel.deepseek; // 預設使用 deepseek
   bool _isInitialized = false;
 
   AIModel get currentModel => _currentModel;
@@ -42,7 +42,7 @@ class ModelManager extends ChangeNotifier {
     if (savedModel != null) {
       _currentModel = AIModel.fromString(savedModel);
     } else {
-      _currentModel = AIModel.none;
+      _currentModel = AIModel.deepseek; // 預設使用 deepseek
     }
     
     _isInitialized = true;

@@ -14,11 +14,50 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _isRefreshing = false;
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return; // 防止重複點擊
+    
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      await HistoryManager().refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✅ 已重新整理"),
+            backgroundColor: AppColors.darkGrey,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      print("❌ 重新整理失敗: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("❌ 重新整理失敗: $e"),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -30,10 +69,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             // Simple Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 5), // 下方 padding 再縮小 (10 -> 5)
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
+                  const Text(
                     "動態牆",
                     style: TextStyle(
                       fontSize: 28,
@@ -41,6 +82,72 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       color: AppColors.darkGrey,
                       letterSpacing: -0.5,
                     ),
+                  ),
+                  // 訪客提示（僅未登入時顯示）/ 重新整理按鈕（僅登入時顯示）
+                  StreamBuilder<User?>(
+                    stream: AuthService().userStream,
+                    initialData: AuthService().currentUser,
+                    builder: (context, snapshot) {
+                      final user = snapshot.data;
+                      if (user == null) {
+                        // 未登入：顯示訪客提示
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 14,
+                                color: AppColors.darkGrey.withOpacity(0.7),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "訪客模式僅保留最近 5 篇",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.darkGrey.withOpacity(0.7),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      // 已登入：顯示重新整理按鈕
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _isRefreshing ? null : _handleRefresh,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.darkGrey.withOpacity(_isRefreshing ? 0.05 : 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: _isRefreshing
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.darkGrey),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.refresh_rounded,
+                                    size: 24,
+                                    color: AppColors.darkGrey,
+                                  ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -78,15 +185,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     );
                   }
 
-                  return ListView.builder(
-                    controller: _scrollController,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                    itemCount: records.length,
-                    itemBuilder: (context, index) {
-                      final record = records[index];
-                      return _buildHistoryCard(context, record);
+                  return ShaderMask(
+                    shaderCallback: (Rect bounds) {
+                      return const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+                        stops: [0.0, 0.04, 0.95, 1.0], // 漸層範圍約 4% (適中)
+                      ).createShader(bounds);
                     },
+                    blendMode: BlendMode.dstIn,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 30, 20, 100), // Padding 30，剛好避開漸層
+                      itemCount: records.length,
+                      itemBuilder: (context, index) {
+                        final record = records[index];
+                        return _buildHistoryCard(context, record);
+                      },
+                    ),
                   );
                 },
               ),
@@ -141,7 +259,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     initialData: AuthService().currentUser, // 設定初始資料
                     builder: (context, snapshot) {
                       final user = snapshot.data;
-                      final displayName = user?.displayName ?? "訪客";
+                      // 已登入但沒設定名稱 → 「匿名」
+                      // 未登入 → 「訪客」
+                      final displayName = user != null
+                        ? (user.displayName?.isNotEmpty == true ? user.displayName! : "匿名")
+                        : "訪客";
                       final photoURL = user?.photoURL;
                       
                       return Row(

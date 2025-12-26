@@ -140,32 +140,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  // 使用者名稱膠囊
+                  // 使用者名稱膠囊（僅登入時顯示）
                   StreamBuilder<User?>(
                     stream: AuthService().userStream,
                     initialData: AuthService().currentUser, // 設定初始資料
                     builder: (context, snapshot) {
                       final user = snapshot.data;
-                      final hasName = user?.displayName != null && user!.displayName!.isNotEmpty;
+                      
+                      // 未登入時顯示佔位（保持佈局）
+                      if (user == null) {
+                        return const SizedBox(width: 1); // 極小佔位，不可見但保持佈局
+                      }
+                      
+                      final hasName = user.displayName?.isNotEmpty == true;
                       
                       return GestureDetector(
-                        onTap: () {
-                          // 跳轉到 Profile 頁面 (假設你的 main_screen 有這個功能)
-                          // 這裡先不做任何事，或是你可以加導航邏輯
-                        },
+                        onTap: () => _showEditNameDialog(context, user),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: hasName ? AppColors.darkGrey : AppColors.skinPink.withOpacity(0.5),
+                            color: hasName ? AppColors.darkGrey : AppColors.darkGrey.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.darkGrey.withOpacity(0.2),
+                              width: 1,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (!hasName) ...[
-                                Icon(Icons.edit, size: 14, color: hasName ? Colors.white : AppColors.darkGrey),
-                                const SizedBox(width: 6),
-                              ],
+                              Icon(
+                                hasName ? Icons.person : Icons.edit,
+                                size: 14,
+                                color: hasName ? Colors.white : AppColors.darkGrey,
+                              ),
+                              const SizedBox(width: 6),
                               Text(
                                 hasName ? user.displayName! : "設定名稱",
                                 style: TextStyle(
@@ -279,7 +288,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       initialData: AuthService().currentUser, // 設定初始資料
                                       builder: (context, snapshot) {
                                         final user = snapshot.data;
-                                        final displayName = user?.displayName ?? "訪客";
+                                        // 已登入但沒設定名稱 → 「匿名」
+                                        // 未登入 → 「訪客」
+                                        final displayName = user != null
+                                          ? (user.displayName?.isNotEmpty == true ? user.displayName! : "匿名")
+                                          : "訪客";
                                         final photoURL = user?.photoURL;
                                         
                                         return Row(
@@ -520,6 +533,157 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // 顯示編輯名稱對話框
+  void _showEditNameDialog(BuildContext context, User user) {
+    final controller = TextEditingController(text: user.displayName ?? '');
+    
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "設定暱稱",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkGrey,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkGrey,
+                ),
+                decoration: InputDecoration(
+                  hintText: "輸入你的暱稱",
+                  hintStyle: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.darkGrey.withOpacity(0.4),
+                  ),
+                  filled: true,
+                  fillColor: AppColors.skinPink.withOpacity(0.3),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.darkGrey.withOpacity(0.2), width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.darkGrey.withOpacity(0.2), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.darkGrey, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        "取消",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.darkGrey.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final newName = controller.text.trim();
+                        if (newName.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("⚠️ 暱稱不能為空"),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          print("📝 開始更新暱稱: $newName");
+                          await user.updateDisplayName(newName);
+                          await user.reload();
+                          print("✅ 暱稱更新成功: $newName");
+                          
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("✅ 暱稱已更新為：$newName"),
+                                backgroundColor: AppColors.darkGrey,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          print("❌ 暱稱更新失敗: $e");
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("❌ 更新失敗: $e"),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.darkGrey,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "確定",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -141,22 +141,54 @@ class HistoryManager extends ChangeNotifier {
   }
 
   /// 從 Firestore 讀取雲端資料
-  Future<void> _loadCloud(String userId) async {
+  Future<void> _loadCloud(String userId, {bool forceRefresh = false}) async {
     try {
+      print("⚙️ 開始從 Firestore 載入，forceRefresh: $forceRefresh");
+      
+      // 如果 forceRefresh 為 true，強制從伺服器獲取，不使用快取
       final snapshot = await _firestore
           .collection('users')
           .doc(userId)
           .collection('history')
           .orderBy('timestamp', descending: true)
-          .get();
+          .get(forceRefresh 
+              ? const GetOptions(source: Source.server) 
+              : const GetOptions(source: Source.serverAndCache));
 
+      print("📦 收到 ${snapshot.docs.length} 筆文件");
+      print("📊 資料來源: ${snapshot.metadata.isFromCache ? '快取' : '伺服器'}");
+      
       _records = snapshot.docs
-          .map((doc) => HistoryRecord.fromJson(doc.data()))
+          .map((doc) {
+            final data = doc.data();
+            print("   📄 ID: ${doc.id}, characters: ${(data['characters'] as List?)?.length ?? 0} 個");
+            return HistoryRecord.fromJson(data);
+          })
           .toList();
+      
+      print("✨ 解析完成，共 ${_records.length} 筆記錄");
+      for (var i = 0; i < _records.length && i < 3; i++) {
+        print("   記錄 $i: ${_records[i].characters.length} 個角色回答");
+      }
       
       notifyListeners();
     } catch (e) {
-      print("Error loading cloud history: $e");
+      print("❌ Error loading cloud history: $e");
+      print("❌ Stack trace: ${StackTrace.current}");
+    }
+  }
+
+  /// 公開方法：重新載入資料（登入用戶從雲端，訪客從本地）
+  Future<void> refresh() async {
+    print("🔄 開始重新整理歷史紀錄...");
+    if (_currentUser != null) {
+      print("📡 強制從伺服器載入 (用戶ID: ${_currentUser!.uid})");
+      await _loadCloud(_currentUser!.uid, forceRefresh: true); // 強制從伺服器刷新
+      print("✅ 雲端資料載入完成，共 ${_records.length} 筆記錄");
+    } else {
+      print("💾 從本地載入");
+      await _loadLocal();
+      print("✅ 本地資料載入完成，共 ${_records.length} 筆記錄");
     }
   }
 

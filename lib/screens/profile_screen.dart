@@ -51,14 +51,17 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          _buildSettingItem(
-                            context,
-                            icon: Icons.smart_toy_outlined,
-                            title: "AI 模型設定",
-                            subtitle: "選擇回應你的 AI 人格模型",
-                            onTap: () => _showModelSelectionModal(context),
-                          ),
-                          Divider(height: 1, color: AppColors.darkGrey.withOpacity(0.05)),
+                          // 只有 test@gmail.com 可以看到 AI 模型設定
+                          if (user?.email == 'test@gmail.com') ...[
+                            _buildSettingItem(
+                              context,
+                              icon: Icons.smart_toy_outlined,
+                              title: "AI 模型設定",
+                              subtitle: "選擇回應你的 AI 人格模型",
+                              onTap: () => _showModelSelectionModal(context),
+                            ),
+                            Divider(height: 1, color: AppColors.darkGrey.withOpacity(0.05)),
+                          ],
                           _buildSettingItem(
                             context,
                             icon: Icons.text_fields_rounded,
@@ -150,7 +153,7 @@ class ProfileScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "訪客",
+                    "匿名",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
@@ -564,20 +567,28 @@ class _UserProfileCardState extends State<UserProfileCard> {
                 autofocus: true,
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.darkGrey,
                 ),
                 decoration: InputDecoration(
                   hintText: "輸入你的暱稱",
                   hintStyle: TextStyle(
                     fontSize: 16,
-                    color: AppColors.darkGrey.withOpacity(0.3),
+                    color: AppColors.darkGrey.withOpacity(0.4),
                   ),
                   filled: true,
-                  fillColor: AppColors.skinPink.withOpacity(0.15),
+                  fillColor: AppColors.skinPink.withOpacity(0.3),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                    borderSide: BorderSide(color: AppColors.darkGrey.withOpacity(0.2), width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.darkGrey.withOpacity(0.2), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.darkGrey, width: 2),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
