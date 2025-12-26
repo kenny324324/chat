@@ -26,24 +26,27 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      resizeToAvoidBottomInset: false, // 防止鍵盤頂起導航列，雖然首頁有自己的處理邏輯
-      body: Stack( // 使用 Stack 確保 body 延伸到全螢幕，包括 bottomNavigationBar 後方
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: _screens,
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildFloatingTabBar(),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(), // 點擊背景收起鍵盤
+      child: Scaffold(
+        extendBody: true,
+        resizeToAvoidBottomInset: false, // 防止鍵盤頂起導航列，雖然首頁有自己的處理邏輯
+        body: Stack( // 使用 Stack 確保 body 延伸到全螢幕，包括 bottomNavigationBar 後方
+          children: [
+            IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildFloatingTabBar(),
+            ),
+          ],
+        ),
+        // bottomNavigationBar: _buildFloatingTabBar(), // 移除 Scaffold 的 bottomNavigationBar 屬性
       ),
-      // bottomNavigationBar: _buildFloatingTabBar(), // 移除 Scaffold 的 bottomNavigationBar 屬性
     );
   }
 

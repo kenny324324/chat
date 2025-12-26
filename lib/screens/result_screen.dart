@@ -208,8 +208,18 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       if (mounted) {
         final rawChars = List<Map<String, dynamic>>.from(result['characters']);
         
-        // 補上顏色和圖片路徑
+        // 去重（雖然預設模式應該不會重複，但為了一致性還是加上）
+        final Map<String, Map<String, dynamic>> uniqueCharsMap = {};
         for (var char in rawChars) {
+          final name = char['name'];
+          if (!uniqueCharsMap.containsKey(name)) {
+            uniqueCharsMap[name] = char;
+          }
+        }
+        final deduplicatedChars = uniqueCharsMap.values.toList();
+        
+        // 補上顏色和圖片路徑
+        for (var char in deduplicatedChars) {
           _enrichCharacterData(char);
         }
 
@@ -217,13 +227,13 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         await HistoryManager().addRecord(
           userText: widget.userText,
           totalScore: result['totalScore'] as int,
-          rawCharacters: rawChars,
+          rawCharacters: deduplicatedChars,
         );
 
         setState(() {
           _isAnalyzing = false;
           _averageScore = result['totalScore'] as int;
-          _characters = rawChars;
+          _characters = deduplicatedChars;
         });
       }
       return;
@@ -272,22 +282,44 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     if (mounted) {
       final rawChars = List<Map<String, dynamic>>.from(result['characters']);
       
-      // 補上顏色和圖片路徑
+      // Debug: 印出原始資料
+      print("=== API 回傳的角色數量: ${rawChars.length} ===");
       for (var char in rawChars) {
+        print("  - ${char['name']}: ${char['score']}");
+      }
+      
+      // 去重：確保每個角色名稱只出現一次
+      final Map<String, Map<String, dynamic>> uniqueCharsMap = {};
+      for (var char in rawChars) {
+        final name = char['name'];
+        if (!uniqueCharsMap.containsKey(name)) {
+          uniqueCharsMap[name] = char;
+        } else {
+          print("⚠️ 警告：角色 $name 重複出現，已忽略第二次出現");
+        }
+      }
+      final deduplicatedChars = uniqueCharsMap.values.toList();
+      
+      if (deduplicatedChars.length != rawChars.length) {
+        print("✅ 去重完成：${rawChars.length} -> ${deduplicatedChars.length}");
+      }
+      
+      // 補上顏色和圖片路徑
+      for (var char in deduplicatedChars) {
         _enrichCharacterData(char);
       }
 
-      // 儲存到歷史紀錄
+      // 儲存到歷史紀錄（使用去重後的資料）
       await HistoryManager().addRecord(
         userText: widget.userText,
         totalScore: result['totalScore'] as int,
-        rawCharacters: rawChars,
+        rawCharacters: deduplicatedChars,
       );
 
       setState(() {
         _isAnalyzing = false;
         _averageScore = result['totalScore'] as int;
-        _characters = rawChars;
+        _characters = deduplicatedChars; // 使用去重後的資料
       });
       
       // 不再重新觸發動畫，避免「載入中」到「顯示內容」時卡片再次滑入
@@ -302,7 +334,17 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !_isAnalyzing, // 只有在不是分析中時才允許返回
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return; // 如果已經 pop 了就不用處理
+        
+        // 如果正在分析，顯示警告對話框
+        if (_isAnalyzing) {
+          _showInterruptWarning(context);
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppColors.skinPink,
       body: SafeArea(
         child: Column(
@@ -415,7 +457,8 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           ],
         ),
       ),
-    );
+    ), // Scaffold 結束
+    ); // PopScope 結束
   }
 
   // 使用者貼文卡片 (唯讀，Hero 目標)
@@ -536,6 +579,50 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       style: IconButton.styleFrom(
         padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
+  // 中斷警告對話框
+  void _showInterruptWarning(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.psychology_outlined, color: AppColors.darkGrey, size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "角色們還在思考中...",
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.darkGrey),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          "現在返回的話，他們可能會忘記剛剛在想什麼，\n你真的要打斷他們嗎？ 🤔",
+          style: TextStyle(color: AppColors.darkGrey, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("再等等", style: TextStyle(color: AppColors.darkGrey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext); // 關閉對話框
+              Navigator.pop(context); // 返回上一頁
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("還是返回", style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

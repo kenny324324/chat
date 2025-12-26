@@ -12,7 +12,20 @@
           "package_name": "com.kenny.soulfeed"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "919289861778-oqa6vki6h10e68i899u0kbbngtkhjv2q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kenny.soulfeed",
+            "certificate_hash": "d3f204e6f13734fce8d73e8b2b70da8b88d5133d"
+          }
+        },
+        {
+          "client_id": "919289861778-8o9bppm6f00uefthmtrskanolndhgvnu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBN1tlR2ocQQu9edyY7P-IFVjpKbQypWPw"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "919289861778-8o9bppm6f00uefthmtrskanolndhgvnu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "919289861778-l9ke5t43lanq7vphgeisuk6q8b5dgh4d.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.kenny.soulfeed"
+              }
+            }
+          ]
         }
       }
     }
