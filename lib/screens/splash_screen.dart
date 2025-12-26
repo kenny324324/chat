@@ -16,7 +16,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  String _loadingText = "正在喚醒 AI 人格...";
+  // String _loadingText = "正在喚醒 AI 人格...";
 
   @override
   void initState() {
@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       await HistoryManager().initialize();
 
       // 4. 初始化角色 (這最花時間，因為要聯網)
-      setState(() => _loadingText = "正在讀取角色設定...");
+      // setState(() => _loadingText = "正在讀取角色設定...");
       
       // 設定一個 Timeout，如果 5 秒連不上就直接用預設值，避免卡死
       await CharacterManager().initialize().timeout(
@@ -84,55 +84,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return Scaffold(
       backgroundColor: AppColors.skinPink,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo 動畫
-            ScaleTransition(
-              scale: Tween<double>(begin: 0.9, end: 1.1).animate(_animation),
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.shadowPink.withOpacity(0.5),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  size: 60,
-                  color: AppColors.darkGrey,
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            // 標題
-            const Text(
-              "SoulFeed",
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: AppColors.darkGrey,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 20),
-            // 載入文字
-            Text(
-              _loadingText,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.darkGrey.withOpacity(0.6),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.9, end: 1.1).animate(_animation),
+          child: Image.asset(
+            'icon.png',
+            width: 180,
+            height: 180,
+          ),
         ),
       ),
     );
