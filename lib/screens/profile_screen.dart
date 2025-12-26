@@ -1,14 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
 import '../core/app_theme.dart';
 import '../core/app_animations.dart';
 import '../core/model_manager.dart';
 import '../core/theme_manager.dart';
 import '../services/auth_service.dart';
-import '../services/storage_service.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -506,35 +502,9 @@ class UserProfileCard extends StatefulWidget {
 }
 
 class _UserProfileCardState extends State<UserProfileCard> {
-  bool _isUploading = false;
-
-  Future<void> _pickAndUploadImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
-    
-    if (image == null) return;
-
-    setState(() {
-      _isUploading = true;
-    });
-
-    try {
-      final String downloadUrl = await StorageService().uploadUserAvatar(widget.user.uid, File(image.path));
-      await widget.user.updatePhotoURL(downloadUrl);
-      await widget.user.reload();
-      if (mounted) setState(() {});
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("上傳失敗: $e")));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-        });
-      }
-    }
-  }
+  // 移除上傳相關邏輯，暫時使用預設頭貼
+  // bool _isUploading = false;
+  // Future<void> _pickAndUploadImage() async { ... }
 
   Future<void> _updateName() async {
     final TextEditingController controller = TextEditingController(text: widget.user.displayName);
@@ -703,39 +673,15 @@ class _UserProfileCardState extends State<UserProfileCard> {
       child: Row(
         children: [
           // 頭像區塊
-          GestureDetector(
-            onTap: _pickAndUploadImage,
-            child: Stack(
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.skinPink.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: ClipOval(
-                    child: _isUploading
-                      ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                      : widget.user.photoURL != null 
-                        ? Image.network(widget.user.photoURL!, fit: BoxFit.cover)
-                        : const Icon(Icons.add_a_photo_rounded, color: AppColors.darkGrey, size: 24),
-                  ),
-                ),
-                if (!_isUploading && widget.user.photoURL != null)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkGrey,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.edit, size: 10, color: Colors.white),
-                    ),
-                  ),
-              ],
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.skinPink.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            child: const ClipOval(
+              child: Icon(Icons.person, color: AppColors.darkGrey, size: 32),
             ),
           ),
           

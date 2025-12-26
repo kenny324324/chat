@@ -293,7 +293,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         final displayName = user != null
                                           ? (user.displayName?.isNotEmpty == true ? user.displayName! : "匿名")
                                           : "訪客";
-                                        final photoURL = user?.photoURL;
+                                        // 暫時強制使用預設頭貼
+                                        // final photoURL = user?.photoURL;
                                         
                                         return Row(
                                           children: [
@@ -304,14 +305,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                 color: AppColors.skinPink.withOpacity(0.5),
                                                 shape: BoxShape.circle,
                                               ),
-                                              child: ClipOval(
-                                                child: photoURL != null
-                                                  ? Image.network(photoURL, fit: BoxFit.cover)
-                                                  : const Icon(
-                                                      Icons.person,
-                                                      color: AppColors.darkGrey,
-                                                      size: 20,
-                                                    ),
+                                              child: const ClipOval(
+                                                child: Icon(
+                                                  Icons.person,
+                                                  color: AppColors.darkGrey,
+                                                  size: 20,
+                                                ),
                                               ),
                                             ),
                                             const SizedBox(width: 12),
