@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_theme.dart';
 import '../core/history_manager.dart';
+import '../services/auth_service.dart';
 import 'result_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -134,39 +136,56 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // User Avatar
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
-                      color: AppColors.darkGrey,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  // User Name & Time
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "罪孽深重的靈魂",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AppColors.darkGrey,
+                  StreamBuilder<User?>(
+                    stream: AuthService().userStream,
+                    initialData: AuthService().currentUser, // 設定初始資料
+                    builder: (context, snapshot) {
+                      final user = snapshot.data;
+                      final displayName = user?.displayName ?? "訪客";
+                      final photoURL = user?.photoURL;
+                      
+                      return Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: AppColors.skinPink.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: ClipOval(
+                              child: photoURL != null
+                                ? Image.network(photoURL, fit: BoxFit.cover)
+                                : const Icon(Icons.person, color: AppColors.darkGrey, size: 24),
+                            ),
                           ),
-                        ),
-                        Text(
-                          "$date $time",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.darkGrey.withOpacity(0.5),
+                          const SizedBox(width: 12),
+                          // User Name & Time
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppColors.darkGrey,
+                                ),
+                              ),
+                              Text(
+                                "$date $time",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.darkGrey.withOpacity(0.5),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      );
+                    },
                   ),
+                  const Spacer(),
                   // Score Badge (Pill)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

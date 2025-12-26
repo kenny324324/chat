@@ -11,8 +11,8 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  /// 監聽登入狀態變更
-  Stream<User?> get userStream => _auth.authStateChanges();
+  /// 監聽登入狀態與使用者資料變更
+  Stream<User?> get userStream => _auth.userChanges();
 
   /// 取得目前使用者
   User? get currentUser => _auth.currentUser;

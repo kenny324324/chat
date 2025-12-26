@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:ui'; // For ImageFilter
+import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_theme.dart';
 import 'result_screen.dart';
-import '../widgets/settings_modal.dart'; // 引入 SettingsModal
+import '../services/auth_service.dart';
 
 // 自定義 Hero 矩形補間，讓高度變化更平滑
 class SmoothRectTween extends RectTween {
@@ -139,25 +140,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  Row(
-                    children: [
-                      // 設定按鈕
-                      IconButton(
-                        onPressed: () => SettingsModal.show(context),
-                        icon: const Icon(Icons.settings, color: AppColors.darkGrey),
-                        style: IconButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  // 使用者名稱膠囊
+                  StreamBuilder<User?>(
+                    stream: AuthService().userStream,
+                    initialData: AuthService().currentUser, // 設定初始資料
+                    builder: (context, snapshot) {
+                      final user = snapshot.data;
+                      final hasName = user?.displayName != null && user!.displayName!.isNotEmpty;
+                      
+                      return GestureDetector(
+                        onTap: () {
+                          // 跳轉到 Profile 頁面 (假設你的 main_screen 有這個功能)
+                          // 這裡先不做任何事，或是你可以加導航邏輯
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: hasName ? AppColors.darkGrey : AppColors.skinPink.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!hasName) ...[
+                                Icon(Icons.edit, size: 14, color: hasName ? Colors.white : AppColors.darkGrey),
+                                const SizedBox(width: 6),
+                              ],
+                              Text(
+                                hasName ? user.displayName! : "設定名稱",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: hasName ? Colors.white : AppColors.darkGrey,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 愛心圖示 (純裝飾，不可點擊)
-                      const Icon(
-                        Icons.favorite_border_rounded,
-                        color: AppColors.darkGrey,
-                        size: 28,
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -253,45 +274,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       20,
                                       0,
                                     ), // 與 ResultScreen 完全一致
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 42, // 統一為 42
-                                          height: 42,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.darkGrey,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.person,
-                                            color: Colors.white,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                    child: StreamBuilder<User?>(
+                                      stream: AuthService().userStream,
+                                      initialData: AuthService().currentUser, // 設定初始資料
+                                      builder: (context, snapshot) {
+                                        final user = snapshot.data;
+                                        final displayName = user?.displayName ?? "訪客";
+                                        final photoURL = user?.photoURL;
+                                        
+                                        return Row(
                                           children: [
-                                            const Text(
-                                              "罪孽深重的靈魂", // 使用者名稱
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16, // 統一為 16
-                                                color: AppColors.darkGrey,
+                                            Container(
+                                              width: 42, // 統一為 42
+                                              height: 42,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.skinPink.withOpacity(0.5),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: ClipOval(
+                                                child: photoURL != null
+                                                  ? Image.network(photoURL, fit: BoxFit.cover)
+                                                  : const Icon(
+                                                      Icons.person,
+                                                      color: AppColors.darkGrey,
+                                                      size: 20,
+                                                    ),
                                               ),
                                             ),
-                                            Text(
-                                              "撰寫新貼文...",
-                                              style: TextStyle(
-                                                fontSize: 12, // 統一為 12
-                                                color: AppColors.darkGrey
-                                                    .withOpacity(0.5),
-                                              ),
+                                            const SizedBox(width: 12),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  displayName,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16, // 統一為 16
+                                                    color: AppColors.darkGrey,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  "撰寫新貼文...",
+                                                  style: TextStyle(
+                                                    fontSize: 12, // 統一為 12
+                                                    color: AppColors.darkGrey
+                                                        .withOpacity(0.5),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
-                                        ),
-                                      ],
+                                        );
+                                      },
                                     ),
                                   ),
 

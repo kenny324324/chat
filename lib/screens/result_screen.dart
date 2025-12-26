@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:ui'; // For ImageFilter
+import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_theme.dart';
 import '../core/model_manager.dart';
 import '../core/history_manager.dart';
 import '../core/character_manager.dart'; // Import CharacterManager
+import '../services/auth_service.dart';
 import 'character_card.dart';
 import '../services/gemini_service.dart';
 import '../services/deepseek_service.dart';
@@ -490,41 +492,55 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
               // User Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: AppColors.darkGrey,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.person, color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                child: StreamBuilder<User?>(
+                  stream: AuthService().userStream,
+                  initialData: AuthService().currentUser, // 關鍵：設定初始資料！
+                  builder: (context, snapshot) {
+                    final user = snapshot.data;
+                    final displayName = user?.displayName ?? "訪客";
+                    final photoURL = user?.photoURL;
+                    
+                    return Row(
                       children: [
-                        const Text(
-                          "罪孽深重的靈魂",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AppColors.darkGrey,
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.skinPink.withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: ClipOval(
+                            child: photoURL != null
+                              ? Image.network(photoURL, fit: BoxFit.cover)
+                              : const Icon(Icons.person, color: AppColors.darkGrey, size: 20),
                           ),
                         ),
-                        Text(
-                          "剛剛",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.darkGrey.withOpacity(0.5),
-                          ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.darkGrey,
+                              ),
+                            ),
+                            Text(
+                              "剛剛",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.darkGrey.withOpacity(0.5),
+                              ),
+                            ),
+                          ],
                         ),
+                        const Spacer(),
+                        Icon(Icons.more_horiz, color: AppColors.darkGrey.withOpacity(0.4)),
                       ],
-                    ),
-                    const Spacer(),
-                    Icon(Icons.more_horiz, color: AppColors.darkGrey.withOpacity(0.4)),
-                  ],
+                    );
+                  },
                 ),
               ),
               

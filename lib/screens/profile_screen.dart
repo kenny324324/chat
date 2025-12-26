@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import '../core/app_theme.dart';
 import '../core/app_animations.dart';
 import '../core/model_manager.dart';
 import '../core/theme_manager.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -32,24 +36,18 @@ class ProfileScreen extends StatelessWidget {
                     
                     // 1. User Avatar & Info (Dynamic)
                     if (isLoggedIn) 
-                      _buildUserInfo(user)
+                      UserProfileCard(user: user)
                     else 
                       _buildGuestInfo(context),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 24),
 
                     // 2. Settings List
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.shadowPink.withOpacity(0.15),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        // Removed Shadow
                       ),
                       child: Column(
                         children: [
@@ -85,13 +83,7 @@ class ProfileScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.shadowPink.withOpacity(0.15),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                         // Removed Shadow
                       ),
                       child: Column(
                         children: [
@@ -128,86 +120,76 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // 登入狀態的使用者資訊
-  Widget _buildUserInfo(User user) {
-    return Column(
-      children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: AppTheme.softShadow,
-            image: user.photoURL != null 
-              ? DecorationImage(image: NetworkImage(user.photoURL!), fit: BoxFit.cover)
-              : null,
-          ),
-          child: user.photoURL == null 
-            ? Center(child: Text(user.displayName?[0].toUpperCase() ?? "U", style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppColors.darkGrey)))
-            : null,
-        ),
-        const SizedBox(height: 16),
-        Text(
-          user.displayName ?? "使用者",
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: AppColors.darkGrey,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        if (user.email != null)
-          Text(
-            user.email!,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.darkGrey.withOpacity(0.6),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-      ],
-    );
-  }
-
   // 訪客狀態的使用者資訊 (點擊可登入)
   Widget _buildGuestInfo(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
-      child: Column(
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.darkGrey,
-              shape: BoxShape.circle,
-              boxShadow: AppTheme.softShadow,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          // Removed Shadow
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.darkGrey,
+                shape: BoxShape.circle,
+                // Removed Shadow
+              ),
+              child: const Icon(Icons.person_add_alt_1, size: 32, color: Colors.white),
             ),
-            child: const Icon(Icons.person_add_alt_1, size: 40, color: Colors.white),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            "點擊登入 / 註冊",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: AppColors.darkGrey,
-              letterSpacing: -0.5,
-              decoration: TextDecoration.underline,
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "訪客",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.darkGrey,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "點擊此處登入或註冊",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.darkGrey.withOpacity(0.6),
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.darkGrey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "尚未同步雲端",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkGrey,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "永久保存您的心靈紀錄",
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.darkGrey.withOpacity(0.6),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.darkGrey.withOpacity(0.3)),
+          ],
+        ),
       ),
     );
   }
@@ -505,6 +487,344 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class UserProfileCard extends StatefulWidget {
+  final User user;
+  const UserProfileCard({super.key, required this.user});
+
+  @override
+  State<UserProfileCard> createState() => _UserProfileCardState();
+}
+
+class _UserProfileCardState extends State<UserProfileCard> {
+  bool _isUploading = false;
+
+  Future<void> _pickAndUploadImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
+    
+    if (image == null) return;
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final String downloadUrl = await StorageService().uploadUserAvatar(widget.user.uid, File(image.path));
+      await widget.user.updatePhotoURL(downloadUrl);
+      await widget.user.reload();
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("上傳失敗: $e")));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateName() async {
+    final TextEditingController controller = TextEditingController(text: widget.user.displayName);
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "設定暱稱",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkGrey,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.darkGrey,
+                ),
+                decoration: InputDecoration(
+                  hintText: "輸入你的暱稱",
+                  hintStyle: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.darkGrey.withOpacity(0.3),
+                  ),
+                  filled: true,
+                  fillColor: AppColors.skinPink.withOpacity(0.15),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        "取消",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.darkGrey.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (controller.text.trim().isNotEmpty) {
+                          try {
+                            final newName = controller.text.trim();
+                            print('📝 開始更新暱稱: $newName');
+                            
+                            await widget.user.updateDisplayName(newName);
+                            print('✅ updateDisplayName 完成');
+                            
+                            await widget.user.reload();
+                            print('✅ user.reload 完成');
+                            
+                            print('📌 更新後的使用者資料:');
+                            print('   - UID: ${widget.user.uid}');
+                            print('   - Email: ${widget.user.email}');
+                            print('   - DisplayName: ${widget.user.displayName}');
+                            print('   - PhotoURL: ${widget.user.photoURL}');
+                            
+                            if (mounted) {
+                              Navigator.pop(context);
+                              setState(() {});
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('✅ 暱稱已更新為：$newName'),
+                                  backgroundColor: AppColors.darkGrey,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            print('❌ 更新暱稱失敗: $e');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('❌ 更新失敗: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          print('⚠️ 暱稱不能為空');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.darkGrey,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "確定",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.darkGrey.withOpacity(0.12), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          // 頭像區塊
+          GestureDetector(
+            onTap: _pickAndUploadImage,
+            child: Stack(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.skinPink.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipOval(
+                    child: _isUploading
+                      ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                      : widget.user.photoURL != null 
+                        ? Image.network(widget.user.photoURL!, fit: BoxFit.cover)
+                        : const Icon(Icons.add_a_photo_rounded, color: AppColors.darkGrey, size: 24),
+                  ),
+                ),
+                if (!_isUploading && widget.user.photoURL != null)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkGrey,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.edit, size: 10, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // 資訊區塊
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 名稱區塊
+                if (widget.user.displayName != null && widget.user.displayName!.isNotEmpty)
+                  InkWell(
+                    onTap: _updateName,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.user.displayName!,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkGrey,
+                                letterSpacing: -0.3,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.edit_rounded, size: 14, color: AppColors.darkGrey.withOpacity(0.3)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  InkWell(
+                    onTap: _updateName,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.skinPink.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.edit, size: 14, color: AppColors.darkGrey),
+                          SizedBox(width: 4),
+                          Text(
+                            "設定暱稱",
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.darkGrey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Email
+                if (widget.user.email != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.user.email!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.darkGrey.withOpacity(0.5),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                
+                const SizedBox(height: 6),
+                
+                // Member Badge
+                Row(
+                  children: [
+                    Icon(Icons.verified_user, size: 12, color: AppColors.darkGrey.withOpacity(0.5)),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Member",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.darkGrey.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
