@@ -126,70 +126,73 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           children: [
             // 1. 頂部導航欄 (Custom App Bar)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "SoulFeed",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.darkGrey,
-                      letterSpacing: -0.5,
+            MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "SoulFeed",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.darkGrey,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  // 使用者名稱膠囊（僅登入時顯示）
-                  StreamBuilder<User?>(
-                    stream: AuthService().userStream,
-                    initialData: AuthService().currentUser, // 設定初始資料
-                    builder: (context, snapshot) {
-                      final user = snapshot.data;
-                      
-                      // 未登入時顯示佔位（保持佈局）
-                      if (user == null) {
-                        return const SizedBox(width: 1); // 極小佔位，不可見但保持佈局
-                      }
-                      
-                      final hasName = user.displayName?.isNotEmpty == true;
-                      
-                      return GestureDetector(
-                        onTap: () => _showEditNameDialog(context, user),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: hasName ? AppColors.darkGrey : AppColors.darkGrey.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.darkGrey.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                hasName ? Icons.person : Icons.edit,
-                                size: 14,
-                                color: hasName ? Colors.white : AppColors.darkGrey,
+                    // 使用者名稱膠囊（僅登入時顯示）
+                    StreamBuilder<User?>(
+                      stream: AuthService().userStream,
+                      initialData: AuthService().currentUser, // 設定初始資料
+                      builder: (context, snapshot) {
+                        final user = snapshot.data;
+                        
+                        // 未登入時顯示佔位（保持佈局）
+                        if (user == null) {
+                          return const SizedBox(width: 1); // 極小佔位，不可見但保持佈局
+                        }
+                        
+                        final hasName = user.displayName?.isNotEmpty == true;
+                        
+                        return GestureDetector(
+                          onTap: () => _showEditNameDialog(context, user),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: hasName ? AppColors.darkGrey : AppColors.darkGrey.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppColors.darkGrey.withOpacity(0.2),
+                                width: 1,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                hasName ? user.displayName! : "設定名稱",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  hasName ? Icons.person : Icons.edit,
+                                  size: 14,
                                   color: hasName ? Colors.white : AppColors.darkGrey,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  hasName ? user.displayName! : "設定名稱",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: hasName ? Colors.white : AppColors.darkGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
 

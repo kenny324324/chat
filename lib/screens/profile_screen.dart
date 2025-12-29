@@ -65,7 +65,15 @@ class ProfileScreen extends StatelessWidget {
                             subtitle: "自定義應用程式顯示字體",
                             onTap: () => _showFontSelectionModal(context),
                           ),
-                           Divider(height: 1, color: AppColors.darkGrey.withOpacity(0.05)),
+                          Divider(height: 1, color: AppColors.darkGrey.withOpacity(0.05)),
+                          _buildSettingItem(
+                            context,
+                            icon: Icons.format_size,
+                            title: "字體大小",
+                            subtitle: "調整文字顯示大小",
+                            onTap: () => _showFontSizeSelectionModal(context),
+                          ),
+                          Divider(height: 1, color: AppColors.darkGrey.withOpacity(0.05)),
                           _buildSettingItem(
                             context,
                             icon: Icons.notifications_outlined,
@@ -324,6 +332,40 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  void _showFontSizeSelectionModal(BuildContext context) {
+    AppAnimations.showBouncingModal(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "選擇字體大小",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkGrey,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildFontSizeOption(context, FontSize.small),
+            _buildFontSizeOption(context, FontSize.medium),
+            _buildFontSizeOption(context, FontSize.large, isLast: true),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildModelOption(BuildContext context, AIModel model, {bool isLast = false}) {
     return ListenableBuilder(
       listenable: ModelManager(),
@@ -489,6 +531,46 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFontSizeOption(BuildContext context, FontSize fontSize, {bool isLast = false}) {
+    return ListenableBuilder(
+      listenable: ThemeManager(),
+      builder: (context, _) {
+        final isSelected = ThemeManager().currentFontSize == fontSize;
+        
+        return GestureDetector(
+          onTap: () {
+            ThemeManager().setFontSize(fontSize);
+            Navigator.pop(context);
+          },
+          child: Container(
+            margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.darkGrey : AppColors.skinPink.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(20),
+              border: isSelected ? null : Border.all(color: AppColors.darkGrey.withOpacity(0.1)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  fontSize.displayName,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : AppColors.darkGrey,
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(Icons.check_circle, color: Colors.white)
+              ],
+            ),
+          ),
+        );
+      }
     );
   }
 }

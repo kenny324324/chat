@@ -8,47 +8,59 @@ class SettingsModal {
   static void show(BuildContext context) {
     AppAnimations.showBouncingModal(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "設定",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkGrey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "設定",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkGrey,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _buildSettingOption(
-              context, 
-              icon: Icons.smart_toy_outlined, 
-              title: "AI 模型設定",
-              onTap: () {
-                Navigator.pop(context);
-                _showModelSelectionModal(context);
-              }
-            ),
-            _buildSettingOption(
-              context, 
-              icon: Icons.text_fields_rounded, 
-              title: "字體風格",
-              onTap: () {
-                Navigator.pop(context);
-                _showFontSelectionModal(context);
-              }
-            ),
-          ],
+              const SizedBox(height: 20),
+              _buildSettingOption(
+                context, 
+                icon: Icons.smart_toy_outlined, 
+                title: "AI 模型設定",
+                onTap: () {
+                  Navigator.pop(context);
+                  _showModelSelectionModal(context);
+                }
+              ),
+              _buildSettingOption(
+                context, 
+                icon: Icons.text_fields_rounded, 
+                title: "字體風格",
+                onTap: () {
+                  Navigator.pop(context);
+                  _showFontSelectionModal(context);
+                }
+              ),
+              _buildSettingOption(
+                context, 
+                icon: Icons.format_size, 
+                title: "字體大小",
+                onTap: () {
+                  Navigator.pop(context);
+                  _showFontSizeSelectionModal(context);
+                }
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -80,33 +92,36 @@ class SettingsModal {
   static void _showModelSelectionModal(BuildContext context) {
     AppAnimations.showBouncingModal(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "選擇 AI 模型",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkGrey,
-              ),
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
             ),
-            const SizedBox(height: 20),
-            _buildModelOption(context, AIModel.none),
-            _buildModelOption(context, AIModel.gemini),
-            _buildModelOption(context, AIModel.deepseek),
-            _buildModelOption(context, AIModel.chatgpt, isLast: true),
-          ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "選擇 AI 模型",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkGrey,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildModelOption(context, AIModel.none),
+              _buildModelOption(context, AIModel.gemini),
+              _buildModelOption(context, AIModel.deepseek),
+              _buildModelOption(context, AIModel.chatgpt, isLast: true),
+            ],
+          ),
         ),
       ),
     );
@@ -115,34 +130,74 @@ class SettingsModal {
   static void _showFontSelectionModal(BuildContext context) {
     AppAnimations.showBouncingModal(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "選擇字體",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkGrey,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildFontOption(context, "系統預設", "OpenHuninn"),
+              _buildFontOption(context, "宇文天穹體", "AppFont"),
+              _buildFontOption(context, "文青手寫體", "Handwriting"),
+              _buildFontOption(context, "何某手寫體", "NaniFont"),
+              _buildFontOption(context, "自動鉛筆體", "AutoPencil", isLast: true),
+            ],
           ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "選擇字體",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkGrey,
-              ),
+      ),
+    );
+  }
+
+  static void _showFontSizeSelectionModal(BuildContext context) {
+    AppAnimations.showBouncingModal(
+      context: context,
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
             ),
-            const SizedBox(height: 20),
-            _buildFontOption(context, "系統預設", "OpenHuninn"),
-            _buildFontOption(context, "宇文天穹體", "AppFont"),
-            _buildFontOption(context, "文青手寫體", "Handwriting"),
-            _buildFontOption(context, "何某手寫體", "NaniFont"),
-            _buildFontOption(context, "自動鉛筆體", "AutoPencil", isLast: true),
-          ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "選擇字體大小",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkGrey,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildFontSizeOption(context, FontSize.small),
+              _buildFontSizeOption(context, FontSize.medium),
+              _buildFontSizeOption(context, FontSize.large, isLast: true),
+            ],
+          ),
         ),
       ),
     );
@@ -226,6 +281,46 @@ class SettingsModal {
                     fontWeight: FontWeight.bold,
                     color: isSelected ? Colors.white : AppColors.darkGrey,
                     fontFamily: fontFamily ?? '', 
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(Icons.check_circle, color: Colors.white)
+              ],
+            ),
+          ),
+        );
+      }
+    );
+  }
+
+  static Widget _buildFontSizeOption(BuildContext context, FontSize fontSize, {bool isLast = false}) {
+    return ListenableBuilder(
+      listenable: ThemeManager(),
+      builder: (context, _) {
+        final isSelected = ThemeManager().currentFontSize == fontSize;
+        
+        return GestureDetector(
+          onTap: () {
+            ThemeManager().setFontSize(fontSize);
+            Navigator.pop(context);
+          },
+          child: Container(
+            margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.darkGrey : AppColors.skinPink.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(20),
+              border: isSelected ? null : Border.all(color: AppColors.darkGrey.withOpacity(0.1)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  fontSize.displayName,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : AppColors.darkGrey,
                   ),
                 ),
                 if (isSelected)

@@ -116,34 +116,36 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 20),
-              // Header
-              Text(
-                _isLogin ? "歡迎回來" : "建立帳號",
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.darkGrey,
-                  letterSpacing: -0.5,
+        child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                // Header
+                Text(
+                  _isLogin ? "歡迎回來" : "建立帳號",
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.darkGrey,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _isLogin 
-                  ? "登入以繼續您的心靈對話旅程" 
-                  : "加入 SoulFeed，永久保存珍貴回憶",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.darkGrey.withOpacity(0.6),
+                const SizedBox(height: 8),
+                Text(
+                  _isLogin 
+                    ? "登入以繼續您的心靈對話旅程" 
+                    : "加入 SoulFeed，永久保存珍貴回憶",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.darkGrey.withOpacity(0.6),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
+                const SizedBox(height: 40),
 
               // Form
               Form(
@@ -290,6 +292,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

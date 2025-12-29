@@ -105,6 +105,17 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.getTheme(ThemeManager().currentFontFamily),
           home: const SplashScreen(),
           debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            // 覆蓋系統的 textScaleFactor，使用 app 自己的設定
+            final mediaQueryData = MediaQuery.of(context);
+            final customMediaQueryData = mediaQueryData.copyWith(
+              textScaleFactor: ThemeManager().currentTextScaleFactor,
+            );
+            return MediaQuery(
+              data: customMediaQueryData,
+              child: child!,
+            );
+          },
         );
       },
     );

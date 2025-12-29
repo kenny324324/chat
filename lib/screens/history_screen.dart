@@ -68,56 +68,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           children: [
             // Simple Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 5), // 下方 padding 再縮小 (10 -> 5)
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    "動態牆",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.darkGrey,
-                      letterSpacing: -0.5,
+            MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 5), // 下方 padding 再縮小 (10 -> 5)
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "動態牆",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.darkGrey,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  // 訪客提示（僅未登入時顯示）/ 重新整理按鈕（僅登入時顯示）
-                  StreamBuilder<User?>(
-                    stream: AuthService().userStream,
-                    initialData: AuthService().currentUser,
-                    builder: (context, snapshot) {
-                      final user = snapshot.data;
-                      if (user == null) {
-                        // 未登入：顯示訪客提示
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 14,
-                                color: AppColors.darkGrey.withOpacity(0.7),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                "訪客模式僅保留最近 5 篇",
-                                style: TextStyle(
-                                  fontSize: 12,
+                    // 訪客提示（僅未登入時顯示）/ 重新整理按鈕（僅登入時顯示）
+                    StreamBuilder<User?>(
+                      stream: AuthService().userStream,
+                      initialData: AuthService().currentUser,
+                      builder: (context, snapshot) {
+                        final user = snapshot.data;
+                        if (user == null) {
+                          // 未登入：顯示訪客提示
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
                                   color: AppColors.darkGrey.withOpacity(0.7),
-                                  fontWeight: FontWeight.w500,
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                                const SizedBox(width: 6),
+                                Text(
+                                  "訪客模式僅保留最近 5 篇",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.darkGrey.withOpacity(0.7),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
                       // 已登入：顯示重新整理按鈕
                       return Material(
                         color: Colors.transparent,
@@ -151,6 +153,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ],
               ),
+            ),
             ),
             
             // List
