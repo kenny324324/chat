@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/character_manager.dart';
+import '../core/history_manager.dart'; // Import HistoryRecord
 
 class DeepSeekService {
   static final DeepSeekService _instance = DeepSeekService._internal();
@@ -10,8 +11,8 @@ class DeepSeekService {
   static const String _apiKey = 'sk-b379002d43954b0193da5e82d8cdde00';
   static const String _baseUrl = 'https://api.deepseek.com/v1/chat/completions';
 
-  Future<Map<String, dynamic>> analyzeAction(String userAction) async {
-    final prompt = _generatePrompt(userAction);
+  Future<Map<String, dynamic>> analyzeAction(String userAction, {List<HistoryRecord> history = const []}) async {
+    final prompt = _generatePrompt(userAction, history);
 
     try {
       final response = await http.post(
@@ -65,12 +66,83 @@ class DeepSeekService {
     }
   }
 
-  String _generatePrompt(String userAction) {
+  Future<String> replyToCharacter({
+    required String characterName,
+    required String characterPrompt,
+    required String originalEvent,
+    required String initialComment,
+    required List<ChatMessage> threadHistory,
+    required String newUserInput,
+  }) async {
+    StringBuffer sb = StringBuffer();
+    sb.writeln("你現在需要扮演一個特定的角色來回應使用者。");
+    sb.writeln("角色設定：$characterPrompt");
+    sb.writeln("");
+    sb.writeln("背景資訊：");
+    sb.writeln("使用者原本的行為：$originalEvent");
+    sb.writeln("你最初的評論：$initialComment");
+    sb.writeln("");
+    sb.writeln("對話紀錄：");
+    for (var msg in threadHistory) {
+      sb.writeln("${msg.role == 'user' ? '使用者' : '你'}: ${msg.content}");
+    }
+    sb.writeln("使用者最新回覆：$newUserInput");
+    sb.writeln("");
+    sb.writeln("請根據你的角色設定，用簡短口語（像在傳訊息）回應使用者。不要重複之前的內容。");
+    sb.writeln("直接輸出回應內容即可，不需要JSON格式。");
+
+    try {
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: jsonEncode({
+          'model': 'deepseek-chat',
+          'messages': [
+            {'role': 'user', 'content': sb.toString()}
+          ],
+          'temperature': 1.3,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        String responseBody = utf8.decode(response.bodyBytes);
+        final data = jsonDecode(responseBody);
+        return data['choices'][0]['message']['content'].trim();
+      } else {
+        return "（伺服器忙碌中...）";
+      }
+    } catch (e) {
+      print("Reply Error: $e");
+      return "（連線錯誤...）";
+    }
+  }
+
+  String _generatePrompt(String userAction, List<HistoryRecord> history) {
     final characters = CharacterManager().characters;
     StringBuffer sb = StringBuffer();
 
     sb.writeln("你是一個多重人格 AI 評判系統。使用者會輸入他們今天做的一件事，你需要扮演 ${characters.length} 個不同的角色來評論這件事。");
     sb.writeln("");
+    
+    // --- 新增：短期記憶區塊 ---
+    if (history.isNotEmpty) {
+      sb.writeln("[使用者近期歷史紀錄]");
+      sb.writeln("以下是使用者最近的 ${history.length} 筆活動紀錄。請自行判斷哪些與本次事件相關。");
+      sb.writeln("如果有相關（例如連續幾天都晚睡、或是重複抱怨工作、前後行為反差大），請務必在評論中提及，表現出你記得這些事；如果無關則可忽略。");
+      for (var record in history) {
+        // 格式： 2023-10-27: 不想上班 (總分: 20)
+        final dateStr = "${record.timestamp.year}-${record.timestamp.month}-${record.timestamp.day}";
+        sb.writeln("- $dateStr: ${record.userText} (總分: ${record.totalScore})");
+      }
+      sb.writeln("");
+      sb.writeln("[結束歷史紀錄]");
+      sb.writeln("");
+    }
+    // -----------------------
+
     sb.writeln("重要規則：");
     sb.writeln("1. 請使用繁體中文（台灣用語）。");
     sb.writeln("2. 嚴禁出現翻譯腔或過度客套的書面語。");

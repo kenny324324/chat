@@ -99,7 +99,12 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       print("🔄 偵測到歷史記錄更新，重新載入 ID: ${updatedRecord.id}");
       print("   更新後角色數量: ${updatedRecord.characters.length}");
       
-      final rawChars = updatedRecord.characters.map((c) => c.toJson()).toList();
+      final rawChars = updatedRecord.characters.map((c) {
+        final json = c.toJson();
+        // 確保 replies 被正確轉換為 List<ChatMessage>
+        json['replies'] = c.replies; 
+        return json;
+      }).toList();
       
       // 補上顏色和圖片路徑
       for (var char in rawChars) {
@@ -131,15 +136,16 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         'color': c.color,
         'score': 0,
         'comment': '',
+        'replies': <ChatMessage>[], // 初始化回覆列表
       }).toList();
     } else {
       // Fallback: 使用寫死的預設資料，避免畫面空白
       _characters = [
-        {'name': 'Softie', 'imagePath': 'assets/images/characters/chic.png', 'color': AppColors.creamYellow, 'score': 0, 'comment': ''},
-        {'name': 'Loyal', 'imagePath': 'assets/images/characters/shiba.png', 'color': const Color(0xFFFFD180), 'score': 0, 'comment': ''},
-        {'name': 'Nerdy', 'imagePath': 'assets/images/characters/bunny.png', 'color': AppColors.powderBlue, 'score': 0, 'comment': ''},
-        {'name': 'Blunt', 'imagePath': 'assets/images/characters/bear.png', 'color': AppColors.palePurple, 'score': 0, 'comment': ''},
-        {'name': 'Chaotic', 'imagePath': 'assets/images/characters/cat.png', 'color': Colors.white, 'score': 0, 'comment': ''},
+        {'name': 'Softie', 'imagePath': 'assets/images/characters/chic.png', 'color': AppColors.creamYellow, 'score': 0, 'comment': '', 'replies': <ChatMessage>[]},
+        {'name': 'Loyal', 'imagePath': 'assets/images/characters/shiba.png', 'color': const Color(0xFFFFD180), 'score': 0, 'comment': '', 'replies': <ChatMessage>[]},
+        {'name': 'Nerdy', 'imagePath': 'assets/images/characters/bunny.png', 'color': AppColors.powderBlue, 'score': 0, 'comment': '', 'replies': <ChatMessage>[]},
+        {'name': 'Blunt', 'imagePath': 'assets/images/characters/bear.png', 'color': AppColors.palePurple, 'score': 0, 'comment': '', 'replies': <ChatMessage>[]},
+        {'name': 'Chaotic', 'imagePath': 'assets/images/characters/cat.png', 'color': Colors.white, 'score': 0, 'comment': '', 'replies': <ChatMessage>[]},
       ];
     }
   }
@@ -152,7 +158,12 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       print("   - ${char.name}: ${char.comment.substring(0, char.comment.length > 20 ? 20 : char.comment.length)}...");
     }
     
-    final rawChars = record.characters.map((c) => c.toJson()).toList();
+    final rawChars = record.characters.map((c) {
+      final json = c.toJson();
+      // 確保 replies 被正確轉換為 List<ChatMessage>
+      json['replies'] = c.replies; 
+      return json;
+    }).toList();
     
     // 補上顏色和圖片路徑
     for (var char in rawChars) {
@@ -223,26 +234,31 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             "name": "Softie",
             "score": 85,
             "comment": "不管做什麼，你都是很棒的！記得要好好照顧自己喔～",
+            "replies": [],
           },
           {
             "name": "Loyal",
             "score": 95,
             "comment": "汪汪！主人做什麼都是最棒的！我永遠支持你！",
+            "replies": [],
           },
           {
             "name": "Nerdy",
             "score": 70,
             "comment": "根據一般行為模式分析，這是個值得記錄的事件。",
+            "replies": [],
           },
           {
             "name": "Blunt",
             "score": 50,
             "comment": "嗯，就這樣吧。沒什麼特別的感想。",
+            "replies": [],
           },
           {
             "name": "Chaotic",
             "score": 88,
             "comment": "喵～今天天氣真好呢！對了你剛剛說什麼來著？",
+            "replies": [],
           },
         ],
         "totalScore": 78,
@@ -256,6 +272,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         final Map<String, Map<String, dynamic>> uniqueCharsMap = {};
         for (var char in rawChars) {
           final name = char['name'];
+          char['replies'] = <ChatMessage>[]; // 確保有 replies
           if (!uniqueCharsMap.containsKey(name)) {
             uniqueCharsMap[name] = char;
           }
@@ -287,12 +304,14 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     }
 
     try {
+      final history = HistoryManager().getRecentRecords(count: 7);
+
       switch (currentModel) {
         case AIModel.gemini:
-          result = await _geminiService.analyzeAction(widget.userText);
+          result = await _geminiService.analyzeAction(widget.userText, history: history);
           break;
         case AIModel.deepseek:
-          result = await _deepseekService.analyzeAction(widget.userText);
+          result = await _deepseekService.analyzeAction(widget.userText, history: history);
           break;
         case AIModel.chatgpt:
           // ChatGPT 暫不支援
@@ -339,6 +358,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       final Map<String, Map<String, dynamic>> uniqueCharsMap = {};
       for (var char in rawChars) {
         final name = char['name'];
+        char['replies'] = <ChatMessage>[]; // 初始化空回覆列表
         if (!uniqueCharsMap.containsKey(name)) {
           uniqueCharsMap[name] = char;
         } else {
@@ -488,7 +508,13 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                           comment: char['comment'] as String,
                           score: char['score'] as int,
                           themeColor: char['color'] as Color,
-                          isLoading: _isAnalyzing, 
+                          isLoading: _isAnalyzing,
+                          replies: (char['replies'] as List?)?.map((m) {
+                            if (m is ChatMessage) return m;
+                            if (m is Map<String, dynamic>) return ChatMessage.fromJson(m);
+                            return ChatMessage(role: 'system', content: 'Error loading message', timestamp: DateTime.now());
+                          }).toList() ?? [],
+                          onReply: (text) => _handleReply(index, text),
                         ),
                       );
                     }),
@@ -503,6 +529,134 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       ),
     ), // Scaffold 結束
     ); // PopScope 結束
+  }
+
+  // 處理回覆
+  Future<void> _handleReply(int index, String userReply) async {
+    final charData = _characters[index];
+    final characterName = charData['name'];
+    
+    // 1. 檢查是否重複 (簡單防抖：如果最後一則留言是使用者且內容相同，則不處理)
+    final rawReplies = charData['replies'] as List?;
+    final List<ChatMessage> currentReplies = rawReplies?.map((m) {
+      if (m is ChatMessage) return m;
+      if (m is Map<String, dynamic>) return ChatMessage.fromJson(m);
+      return ChatMessage(role: 'system', content: 'Error', timestamp: DateTime.now());
+    }).toList() ?? [];
+    
+    // 更新為強型別列表，避免後續錯誤
+    charData['replies'] = currentReplies;
+
+    if (currentReplies.isNotEmpty) {
+      final lastMsg = currentReplies.last;
+      // 允許連續發言，但避免短時間重複送出完全一樣的內容
+      if (lastMsg.role == 'user' && 
+          lastMsg.content == userReply && 
+          DateTime.now().difference(lastMsg.timestamp).inSeconds < 2) {
+        return;
+      }
+    }
+
+    // 2. 立即顯示使用者的回覆 (樂觀更新)
+    final userMsg = ChatMessage(
+      role: 'user', 
+      content: userReply, 
+      timestamp: DateTime.now()
+    );
+
+    setState(() {
+      if (charData['replies'] == null) {
+        charData['replies'] = <ChatMessage>[];
+      }
+      (charData['replies'] as List<ChatMessage>).add(userMsg);
+    });
+
+    // 儲存使用者回覆到歷史紀錄
+    if (widget.historyRecord != null) {
+      // 來自歷史紀錄：直接更新該紀錄
+      await HistoryManager().addReply(
+        recordId: widget.historyRecord!.id,
+        characterName: characterName,
+        message: userMsg,
+      );
+    } else {
+      // 來自即時分析：找出剛剛儲存的那筆紀錄（最新的一筆）
+      final recentRecords = HistoryManager().records;
+      if (recentRecords.isNotEmpty) {
+        await HistoryManager().addReply(
+          recordId: recentRecords.first.id,
+          characterName: characterName,
+          message: userMsg,
+        );
+      }
+    }
+
+    // 3. 呼叫 AI 產生回覆
+    final currentModel = ModelManager().currentModel;
+    if (currentModel == AIModel.none) return; // 不使用模型則不回覆
+
+    try {
+      String aiResponseContent = "";
+      final character = CharacterManager().getCharacterByName(characterName);
+      if (character == null) return;
+
+      // 準備對話歷史 (包含剛剛的使用者回覆)
+      final threadHistory = (charData['replies'] as List<ChatMessage>)
+          .where((m) => m != userMsg) // 排除剛剛那句，避免 AI 自己跟自己對話
+          .toList();
+
+      if (currentModel == AIModel.gemini) {
+        aiResponseContent = await _geminiService.replyToCharacter(
+          characterName: character.name,
+          characterPrompt: character.prompt,
+          originalEvent: widget.userText,
+          initialComment: charData['comment'],
+          threadHistory: threadHistory,
+          newUserInput: userReply,
+        );
+      } else if (currentModel == AIModel.deepseek) {
+        aiResponseContent = await _deepseekService.replyToCharacter(
+          characterName: character.name,
+          characterPrompt: character.prompt,
+          originalEvent: widget.userText,
+          initialComment: charData['comment'],
+          threadHistory: threadHistory,
+          newUserInput: userReply,
+        );
+      }
+
+      // 4. 顯示 AI 回覆
+      final aiMsg = ChatMessage(
+        role: 'ai', 
+        content: aiResponseContent, 
+        timestamp: DateTime.now()
+      );
+
+      setState(() {
+        (charData['replies'] as List<ChatMessage>).add(aiMsg);
+      });
+
+      // 儲存 AI 回覆到歷史紀錄
+      if (widget.historyRecord != null) {
+        await HistoryManager().addReply(
+          recordId: widget.historyRecord!.id,
+          characterName: characterName,
+          message: aiMsg,
+        );
+      } else {
+        final recentRecords = HistoryManager().records;
+        if (recentRecords.isNotEmpty) {
+          await HistoryManager().addReply(
+            recordId: recentRecords.first.id,
+            characterName: characterName,
+            message: aiMsg,
+          );
+        }
+      }
+
+    } catch (e) {
+      print("Reply failed: $e");
+    }
   }
 
   // 使用者貼文卡片 (唯讀，Hero 目標)

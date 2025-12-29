@@ -6,21 +6,50 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 
+class ChatMessage {
+  final String role; // 'user' or 'ai'
+  final String content;
+  final DateTime timestamp;
+
+  ChatMessage({
+    required this.role,
+    required this.content,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'role': role,
+    'content': content,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      role: json['role'],
+      content: json['content'],
+      timestamp: DateTime.parse(json['timestamp']),
+    );
+  }
+}
+
 class CharacterResult {
   final String name;
   final int score;
   final String comment;
+  final List<ChatMessage> replies; // 新增回覆列表
 
   CharacterResult({
     required this.name,
     required this.score,
     required this.comment,
+    this.replies = const [],
   });
 
   Map<String, dynamic> toJson() => {
     'name': name,
     'score': score,
     'comment': comment,
+    'replies': replies.map((m) => m.toJson()).toList(),
   };
 
   factory CharacterResult.fromJson(Map<String, dynamic> json) {
@@ -28,6 +57,9 @@ class CharacterResult {
       name: json['name'],
       score: json['score'],
       comment: json['comment'],
+      replies: (json['replies'] as List?)
+          ?.map((m) => ChatMessage.fromJson(m))
+          .toList() ?? [],
     );
   }
 }
@@ -229,6 +261,7 @@ class HistoryManager extends ChangeNotifier {
         name: c['name'],
         score: c['score'],
         comment: c['comment'],
+        replies: [], // 初始化為空
       )).toList(),
     );
 
@@ -253,6 +286,44 @@ class HistoryManager extends ChangeNotifier {
         _records.removeLast(); // 移除最舊的
       }
       _records.insert(0, record);
+      await _saveToPrefs();
+    }
+    
+    notifyListeners();
+  }
+
+  /// 新增對話紀錄
+  Future<void> addReply({
+    required String recordId,
+    required String characterName,
+    required ChatMessage message,
+  }) async {
+    final recordIndex = _records.indexWhere((r) => r.id == recordId);
+    if (recordIndex == -1) return;
+
+    final record = _records[recordIndex];
+    final charIndex = record.characters.indexWhere((c) => c.name == characterName);
+    
+    if (charIndex == -1) return;
+
+    // 更新記憶體中的資料
+    record.characters[charIndex].replies.add(message);
+    
+    // 更新持久化儲存
+    if (_currentUser != null) {
+      try {
+        await _firestore
+            .collection('users')
+            .doc(_currentUser!.uid)
+            .collection('history')
+            .doc(recordId)
+            .update({
+              'characters': record.characters.map((c) => c.toJson()).toList(),
+            });
+      } catch (e) {
+        print("Error updating reply to cloud: $e");
+      }
+    } else {
       await _saveToPrefs();
     }
     
@@ -292,6 +363,14 @@ class HistoryManager extends ChangeNotifier {
        // 這裡暫時只清空顯示
     }
     await clearAllLocally();
+  }
+
+  // 取得最近的 N 筆歷史紀錄 (排除當前空值，回傳純資料)
+  List<HistoryRecord> getRecentRecords({int count = 7}) {
+    // 簡單回傳前 N 筆，實際使用時呼叫端需要傳入最新的 userText 來排除重複（如果需要）
+    // 這裡直接回傳最新的 count 筆
+    if (_records.isEmpty) return [];
+    return _records.take(count).toList();
   }
 
   Future<void> _saveToPrefs() async {

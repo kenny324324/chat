@@ -28,6 +28,16 @@ class CharacterService {
     }
   }
 
+  // 取得單個角色資料
+  Character? getCharacterByName(String name) {
+    final defaultChars = getDefaultCharacters();
+    try {
+      return defaultChars.firstWhere((c) => c.name == name);
+    } catch (e) {
+      return null;
+    }
+  }
+
   // 輔助方法：初始化資料庫 (開發用)
   Future<void> uploadInitialCharacters() async {
     final batch = _db.batch();
