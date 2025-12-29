@@ -262,12 +262,15 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         }
         final deduplicatedChars = uniqueCharsMap.values.toList();
         
-        // 補上顏色和圖片路徑
-        for (var char in deduplicatedChars) {
-          _enrichCharacterData(char);
-        }
+      // 補上顏色和圖片路徑
+      for (var char in deduplicatedChars) {
+        _enrichCharacterData(char);
+      }
 
-        // 儲存到歷史紀錄 (預設模式也要存)
+      // 打亂留言順序
+      deduplicatedChars.shuffle();
+
+      // 儲存到歷史紀錄 (預設模式也要存)
         await HistoryManager().addRecord(
           userText: widget.userText,
           totalScore: result['totalScore'] as int,
@@ -352,6 +355,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       for (var char in deduplicatedChars) {
         _enrichCharacterData(char);
       }
+
+      // 打亂留言順序
+      deduplicatedChars.shuffle();
 
       // 儲存到歷史紀錄（使用去重後的資料）
       await HistoryManager().addRecord(

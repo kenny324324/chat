@@ -78,6 +78,12 @@ class GeminiService {
 
     sb.writeln("你是一個多重人格 AI 評判系統。使用者會輸入他們今天做的一件事，你需要扮演 ${characters.length} 個不同的角色來評論這件事。");
     sb.writeln("");
+    sb.writeln("重要規則：");
+    sb.writeln("1. 請使用繁體中文（台灣用語）。");
+    sb.writeln("2. 嚴禁出現翻譯腔或過度客套的書面語。");
+    sb.writeln("3. 請大量使用台灣網路流行語（例如：笑死、傻眼、真假、這我、急了、破防）。");
+    sb.writeln("4. 語氣要像在通訊軟體（LINE/IG）上聊天，可以使用「～」、「！」或半形表情符號。");
+    sb.writeln("");
     sb.writeln("角色設定：");
 
     if (characters.isNotEmpty) {
@@ -115,8 +121,8 @@ class GeminiService {
     sb.writeln("請確保：");
     sb.writeln("1. JSON 格式正確。");
     sb.writeln("2. totalScore 為五個角色分數的平均值（整數）。");
-    sb.writeln("3. 評論內容請用繁體中文，語氣要強烈符合角色個性。");
-    sb.writeln("4. 評論要針對使用者的具體行為，不要太通用或模糊。");
+    sb.writeln("3. 評論內容請用繁體中文，語氣要強烈符合角色個性，且必須口語化。");
+    sb.writeln("4. 評論要針對使用者的具體行為，一針見血，不要講空泛的大道理。");
 
     return sb.toString();
   }

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'core/app_theme.dart';
 import 'core/theme_manager.dart';
 import 'screens/splash_screen.dart';
+import 'services/character_service.dart'; // Import CharacterService
 import 'firebase_options.dart'; // 引入生成的設定檔
 
 void main() async {
@@ -29,7 +30,18 @@ class AppEntry extends StatelessWidget {
       // 使用明確的設定檔初始化 Firebase，避開原生設定檔讀取失敗的問題
       future: Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
-      ),
+      ).then((val) async {
+        // [暫時性] 強制更新角色 Prompt 到 Firestore
+        // 請在更新成功後將此段程式碼移除或註解掉，避免每次開啟 App 都寫入
+        try {
+          print("Initializing app and updating prompts...");
+          await CharacterService().updateAllCharacterPrompts();
+          print("Prompts updated successfully.");
+        } catch (e) {
+          print("Failed to update prompts: $e");
+        }
+        return val;
+      }),
       builder: (context, snapshot) {
         // 1. 如果發生錯誤，顯示錯誤畫面
         if (snapshot.hasError) {
